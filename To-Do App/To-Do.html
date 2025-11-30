@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do</title>
+    <!-- 内置 Base64 Favicon (深色圆角矩形 + 白色对勾) -->
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjMWMxOTE3Ii8+PHBhdGggZD0iTTI1IDUwIEw0MyA2OCBMNzUgMzIiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==" type="image/svg+xml">
+
+    <!-- 引入 JetBrains Mono 字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- 核心库 -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+    
+    <style>
+        /* --- 1. 字体策略 --- */
+        body {
+            font-family: 'JetBrains Mono', "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+            font-weight: 400;
+            color: #292524;
+        }
+
+        /* 滚动条隐藏 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 交互微调 */
+        .resizer { width: 5px; cursor: col-resize; transition: background-color 0.2s; z-index: 50; }
+        .resizer:hover, .resizer:active { background-color: #d6d3d1; }
+        input:focus, textarea:focus, select:focus { outline: none; }
+        input[type="date"]::-webkit-calendar-picker-indicator { display: none; }
+
+        /* --- 2. 开关动画 --- */
+        .switch-container {
+            width: 44px;
+            height: 24px;
+            background-color: #e5e7eb;
+            border-radius: 9999px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .switch-container.checked {
+            background-color: #1c1917;
+        }
+        .switch-handle {
+            width: 18px;
+            height: 18px;
+            background-color: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            transition: left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+        }
+        .switch-container.checked .switch-handle {
+            left: 23px;
+        }
+
+        /* --- 3. Markdown (Drake Black 风格) --- */
+        .prose-editor { font-size: 0.95rem; line-height: 1.75; }
+        .prose-editor h1 { font-size: 1.8em; font-weight: 700; margin: 1em 0 0.6em; border-bottom: 2px solid #e7e5e4; padding-bottom: 0.3em; color: #000; }
+        .prose-editor h2 { font-size: 1.5em; font-weight: 600; margin: 1em 0 0.6em; border-bottom: 1px solid #e7e5e4; padding-bottom: 0.3em; color: #1c1917; }
+        .prose-editor h3 { font-size: 1.25em; font-weight: 600; margin: 1em 0 0.5em; }
+        .prose-editor blockquote { border-left: 4px solid #f97316; background-color: #fafaf9; color: #57534e; padding: 0.5em 1em; margin: 1em 0; border-radius: 0 4px 4px 0; }
+        .prose-editor code { font-family: 'JetBrains Mono', monospace; background-color: #f3f4f6; color: #ea580c; padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.9em; }
+        .prose-editor pre { background-color: #1c1917; color: #e5e5e5; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 1em 0; font-family: 'JetBrains Mono', monospace; }
+        .prose-editor pre code { background-color: transparent; color: inherit; padding: 0; }
+        .prose-editor ul, .prose-editor ol { padding-left: 1.8em; margin-bottom: 1em; }
+        .prose-editor ul { list-style-type: disc; }
+        .prose-editor ol { list-style-type: decimal; }
+        .prose-editor a { color: #f97316; text-decoration: none; border-bottom: 1px dashed #f97316; }
+        .prose-editor a:hover { border-bottom-style: solid; }
+        .prose-editor input[type="checkbox"] { margin-right: 0.5em; vertical-align: middle; accent-color: #f97316; }
+        .prose-editor hr { border: 0; border-top: 2px dashed #d6d3d1; margin: 2em 0; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        // --- Icons ---
+        const Icon = ({ children, size = 18, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>);
+        const LayoutIcon = (props) => <Icon {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></Icon>;
+        const CalendarDaysIcon = (props) => <Icon {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></Icon>;
+        const CalendarRangeIcon = (props) => <Icon {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M17 14h-6"/><path d="M13 18H7"/><path d="M7 14h.01"/><path d="M17 18h.01"/></Icon>;
+        const TargetIcon = (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></Icon>;
+        const SettingsIcon = (props) => <Icon {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2-.3l-.15-.15a2 2 0 0 0-2.26.33l-.31.31a2 2 0 0 0-.33 2.26l.15.15a2 2 0 0 1 .3 2l-.25.43a2 2 0 0 1-1.73 1H2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2h.18a2 2 0 0 1 1.73 1l.25.43a2 2 0 0 1-.3 2l-.15.15a2 2 0 0 0 .33 2.26l.31.31a2 2 0 0 0 2.26.33l.15-.15a2 2 0 0 1 2-.3l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 .3l.15.15a2 2 0 0 0 2.26-.33l.31-.31a2 2 0 0 0 .33-2.26l-.15-.15a2 2 0 0 1-.3-2l.25-.43a2 2 0 0 1 1.73-1H22a2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2h-.18a2 2 0 0 1-1-1.73-1l-.25-.43a2 2 0 0 1 .3-2l.15-.15a2 2 0 0 0-.33-2.26l-.31-.31a2 2 0 0 0-2.26-.33l-.15.15a2 2 0 0 1-2 .3l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></Icon>;
+        const CheckCircle2Icon = (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></Icon>;
+        const Trash2Icon = (props) => <Icon {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></Icon>;
+        const PlusIcon = (props) => <Icon {...props}><path d="M5 12h14"/><path d="M12 5v14"/></Icon>;
+        const AlertCircleIcon = (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></Icon>;
+        const DownloadIcon = (props) => <Icon {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></Icon>;
+        const UploadIcon = (props) => <Icon {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></Icon>;
+        const ChevronRightIcon = (props) => <Icon {...props}><path d="m9 18 6-6-6-6"/></Icon>;
+        const FlameIcon = (props) => <Icon {...props}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></Icon>;
+        const ClockIcon = (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Icon>;
+        const EditIcon = (props) => <Icon {...props}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></Icon>;
+        const XIcon = (props) => <Icon {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></Icon>;
+        const CalendarIcon = (props) => <Icon {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></Icon>;
+        const ChevronDownIcon = (props) => <Icon {...props}><path d="m6 9 6 6 6-6"/></Icon>;
+        const SaveIcon = (props) => <Icon {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></Icon>;
+        const EyeIcon = (props) => <Icon {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></Icon>;
+        const CodeIcon = (props) => <Icon {...props}><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></Icon>;
+
+        // --- 工具 ---
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+        const getTodayString = () => new Date().toISOString().split('T')[0];
+        const getCurrentMonthString = () => new Date().toISOString().slice(0, 7);
+        const urgencyColor = { high: 'bg-rose-100 text-rose-700 border-rose-200', medium: 'bg-amber-100 text-amber-700 border-amber-200', low: 'bg-blue-100 text-blue-700 border-blue-200' };
+        const urgencyLabel = { high: '紧急', medium: '适中', low: '暂缓' };
+
+        const initialData = {
+            todos: [
+                { id: '1', text: '体验 To-Do 的流畅交互', urgency: 'high', completed: false, createdAt: Date.now(), dueDate: '' },
+                { id: '2', text: '思考长远的人生目标', urgency: 'medium', completed: false, createdAt: Date.now(), dueDate: '' }
+            ],
+            dailyEntries: {},
+            monthlyEntries: {},
+            goals: [
+                { id: 'g1', title: '成为全栈开发者', details: '# 阶段一：基础\n- [ ] 学习 React 核心概念\n- [ ] 掌握 Tailwind CSS\n\n# 阶段二：进阶\n> 保持好奇心，不断探索。\n\n学习 Node.js 后端开发...', createdAt: Date.now() }
+            ],
+            dailyTemplate: ['阅读30分钟', '运动30分钟', '没有任何拖延'],
+            monthlyTemplate: ['本月最重要的成就', '本月最大的遗憾', '下个月的重心'],
+            todoSubtitle: "专注于重要之事，而非仅仅是急迫之事。",
+            dailySubtitle: "日拱一卒，功不唐捐。",
+            monthlySubtitle: "站在更高的时间维度审视自己。",
+            goalsTagline: "不积跬步，无以至千里。",
+            lastBackup: Date.now(),
+            settings: { autoBackup: false, lastAutoBackupMonth: '' }
+        };
+
+        // --- Markdown Editor ---
+        const MarkdownEditor = ({ value, onChange, placeholder, minHeight = "200px" }) => {
+            const [mode, setMode] = useState('preview');
+            const [isEditing, setIsEditing] = useState(false);
+            const textareaRef = useRef(null);
+
+            const toggleMode = (e) => { e.stopPropagation(); setMode(mode === 'preview' ? 'source' : 'preview'); setIsEditing(false); };
+
+            useEffect(() => { if (isEditing && textareaRef.current) textareaRef.current.focus(); }, [isEditing]);
+
+            const renderMarkdown = useMemo(() => {
+                if (!value) return { __html: '<span class="text-stone-300 italic">' + placeholder + '</span>' };
+                try {
+                    marked.setOptions({ breaks: true, gfm: true });
+                    return { __html: DOMPurify.sanitize(marked.parse(value)) };
+                } catch (e) { return { __html: value }; }
+            }, [value, placeholder]);
+
+            const handleKeyDown = (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    setIsEditing(false);
+                }
+            };
+
+            if (mode === 'source') {
+                return (
+                    <div className="relative w-full h-full min-h-[inherit]" onClick={e => e.stopPropagation()}>
+                        <textarea value={value} onChange={(e) => onChange(e.target.value)} className="w-full h-full min-h-[inherit] resize-none outline-none text-stone-800 bg-stone-50 p-4 rounded-xl border border-stone-200 leading-relaxed font-mono text-sm" placeholder={placeholder} style={{ minHeight }} />
+                        <button onClick={toggleMode} className="absolute top-2 right-2 bg-stone-200 hover:bg-stone-300 p-1.5 rounded-lg text-stone-600 transition-colors z-10"><EyeIcon size={16} /></button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="relative group w-full min-h-[inherit]" style={{ minHeight }} onClick={e => e.stopPropagation()}>
+                    {isEditing ? (
+                        <div className="relative h-full">
+                            <textarea ref={textareaRef} value={value} onChange={(e) => onChange(e.target.value)} onBlur={() => setIsEditing(false)} onKeyDown={handleKeyDown} className="w-full h-full min-h-[inherit] resize-none outline-none text-stone-800 bg-white p-4 rounded-xl border-2 border-stone-900/10 leading-relaxed font-mono text-sm shadow-inner" placeholder={placeholder} style={{ minHeight }} />
+                            <div className="absolute bottom-2 right-2 text-xs text-stone-400 pointer-events-none">Ctrl+Enter 完成</div>
+                        </div>
+                    ) : (
+                        <div onClick={() => setIsEditing(true)} className="w-full h-full min-h-[inherit] p-4 rounded-xl cursor-text transition-colors hover:bg-stone-50 prose-editor" dangerouslySetInnerHTML={renderMarkdown} />
+                    )}
+                    <button onClick={toggleMode} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-stone-100 hover:bg-stone-200 p-1.5 rounded-lg text-stone-400 hover:text-stone-800 z-10"><CodeIcon size={16}/></button>
+                </div>
+            );
+        };
+
+        // --- Toggle ---
+        const ToggleSwitch = ({ checked, onChange }) => (
+            <div onClick={onChange} className={`switch-container ${checked ? 'checked' : ''}`}>
+                <div className="switch-handle"></div>
+            </div>
+        );
+
+        const NavButton = ({ active, onClick, icon, label }) => (
+            <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group flex-shrink-0 ${active ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`}>
+                <div className={`transition-transform duration-200 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>{icon}</div>
+                <span className="font-medium text-sm whitespace-nowrap overflow-hidden">{label}</span>
+            </button>
+        );
+
+        const CustomSelect = ({ value, onChange }) => {
+            const [isOpen, setIsOpen] = useState(false);
+            const ref = useRef(null);
+            const options = [{ value: 'high', label: '! 紧急', color: 'text-rose-600' }, { value: 'medium', label: '· 适中', color: 'text-amber-600' }, { value: 'low', label: '~ 暂缓', color: 'text-blue-600' }];
+            const current = options.find(o => o.value === value);
+            useEffect(() => { const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []);
+            return (
+                <div className="relative" ref={ref}>
+                    <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 border-b border-stone-200 hover:border-stone-400 transition-colors px-1 py-2 text-xs font-medium text-stone-600 outline-none w-20 justify-between group"><span className={current?.color}>{current?.label}</span><ChevronDownIcon size={12} className={`text-stone-300 group-hover:text-stone-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} /></button>
+                    <AnimatePresence>{isOpen && <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute top-full mt-1 left-0 w-24 bg-white rounded-lg shadow-xl border border-stone-100 overflow-hidden z-50 py-1">{options.map(opt => (<button key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors flex items-center gap-2 ${value === opt.value ? 'bg-stone-50 text-stone-900' : 'hover:bg-stone-50 text-stone-500'}`}><span className={opt.color}>{opt.label}</span></button>))}</motion.div>}</AnimatePresence>
+                </div>
+            );
+        };
+
+        const ModuleHeader = ({ title, subtitle, setSubtitle, actionButton }) => (
+            <header className="mb-5 flex flex-col md:flex-row md:items-end justify-between gap-2 md:gap-4 border-b border-stone-100 pb-2">
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-2xl font-bold text-stone-800 tracking-tight leading-tight">{title}</h1>
+                    <input value={subtitle || ""} onChange={(e) => setSubtitle(e.target.value)} className="text-stone-400 text-sm bg-transparent hover:bg-stone-50 rounded-lg outline-none w-full transition-colors mt-2 px-1 -mx-1 truncate" placeholder="点击输入副标题..." />
+                </div>
+                {actionButton && <div className="flex-shrink-0 mb-1">{actionButton}</div>}
+            </header>
+        );
+
+        // --- Modules ---
+        const TodoModule = ({ data, setData }) => {
+            const [text, setText] = useState('');
+            const [urgency, setUrgency] = useState('medium');
+            const [dueDate, setDueDate] = useState('');
+            const dateInputRef = useRef(null);
+            const addTodo = () => { if (!text.trim()) return; setData(prev => ({ ...prev, todos: [{ id: generateId(), text, urgency, dueDate, completed: false, createdAt: Date.now() }, ...prev.todos] })); setText(''); setDueDate(''); };
+            const toggleTodo = (id) => setData(prev => ({ ...prev, todos: prev.todos.map(t => t.id === id ? { ...t, completed: !t.completed, completedAt: !t.completed ? Date.now() : undefined } : t) }));
+            const deleteTodo = (id) => setData(prev => ({ ...prev, todos: prev.todos.filter(t => t.id !== id) }));
+            const handleDateClick = () => { if (dateInputRef.current) try { dateInputRef.current.showPicker(); } catch (e) { dateInputRef.current.focus(); } };
+            const sortedTodos = [...data.todos].sort((a, b) => { if (a.completed !== b.completed) return a.completed ? 1 : -1; if (!a.completed) { const order = { high: 0, medium: 1, low: 2 }; if (order[a.urgency] !== order[b.urgency]) return order[a.urgency] - order[b.urgency]; } return b.createdAt - a.createdAt; });
+
+            return (
+                <div className="max-w-4xl mx-auto">
+                    <ModuleHeader title="待办事项" subtitle={data.todoSubtitle} setSubtitle={(val) => setData(prev => ({ ...prev, todoSubtitle: val }))} />
+                    <div className="bg-white p-3 rounded-2xl shadow-sm border border-stone-100 flex flex-col md:flex-row items-center gap-4 mb-4 transition-shadow">
+                        <input type="text" value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && addTodo()} placeholder="添加新任务..." className="flex-1 px-2 py-2 outline-none text-stone-700 bg-transparent placeholder:text-stone-400 text-base" />
+                        <div className="flex items-center gap-4 border-t md:border-t-0 border-stone-50 pt-2 md:pt-0">
+                            <div className="relative flex items-center gap-2 border-b border-stone-200 hover:border-stone-400 transition-colors px-1 py-2 cursor-pointer group w-24" onClick={handleDateClick}><ClockIcon size={14} className="text-stone-400 group-hover:text-stone-600" /><span className={`text-xs font-medium truncate ${dueDate ? 'text-stone-700' : 'text-stone-400'}`}>{dueDate ? dueDate : "截止日期"}</span><input ref={dateInputRef} type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 pointer-events-none" /></div>
+                            <CustomSelect value={urgency} onChange={setUrgency} /><button onClick={addTodo} className="w-8 h-8 bg-stone-900 text-white rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md shadow-stone-200 flex-shrink-0"><PlusIcon size={16} /></button>
+                        </div>
+                    </div>
+                    <div className="space-y-1"><AnimatePresence initial={false}>{sortedTodos.map(todo => (<motion.div key={todo.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all duration-300 ${todo.completed ? 'bg-stone-50 border-stone-100' : 'bg-white border-stone-100 shadow-sm hover:shadow-md'}`}><button onClick={() => toggleTodo(todo.id)} className="flex-shrink-0 p-1 -m-1 cursor-pointer"><div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all ${todo.completed ? 'bg-stone-400 border-stone-400 text-white' : 'border-stone-300 text-transparent hover:border-stone-800'}`}><CheckCircle2Icon size={12} /></div></button><div className="flex-1 min-w-0 flex flex-col justify-center"><div className={`text-base transition-all truncate ${todo.completed ? 'line-through text-stone-400' : 'text-stone-800'}`}>{todo.text}</div>{(todo.dueDate || (todo.completed && todo.completedAt)) && <div className="flex items-center gap-3 mt-0.5">{todo.dueDate && <div className={`flex items-center gap-1 text-[10px] ${todo.completed ? 'text-stone-300' : 'text-stone-400'}`}><ClockIcon size={10} /><span>{todo.dueDate}</span></div>}</div>}</div>{!todo.completed && <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${urgencyColor[todo.urgency]}`}>{urgencyLabel[todo.urgency]}</span>}<button onClick={() => deleteTodo(todo.id)} className="opacity-0 group-hover:opacity-100 p-2 text-stone-300 hover:text-red-500 rounded-lg transition-all"><Trash2Icon size={16} /></button></motion.div>))}</AnimatePresence></div>
+                </div>
+            );
+        };
+
+        const DailyModule = ({ data, setData }) => {
+            const [selectedDate, setSelectedDate] = useState(getTodayString());
+            const [showTemplateSettings, setShowTemplateSettings] = useState(false);
+            const dateInputRef = useRef(null);
+            const entry = data.dailyEntries[selectedDate] || { id: selectedDate, checklist: data.dailyTemplate.map(t => ({ text: t, completed: false })), content: '', updatedAt: Date.now() };
+            const updateEntry = (newEntry) => setData(prev => ({ ...prev, dailyEntries: { ...prev.dailyEntries, [selectedDate]: newEntry } }));
+            const toggleCheck = (index) => { const newChecklist = [...(entry.checklist.length ? entry.checklist : data.dailyTemplate.map(t => ({ text: t, completed: false })))]; newChecklist[index].completed = !newChecklist[index].completed; updateEntry({ ...entry, checklist: newChecklist, updatedAt: Date.now() }); };
+            const getHeatmapData = () => { const days = []; for (let i = 29; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const dateStr = d.toISOString().split('T')[0]; const hasEntry = data.dailyEntries[dateStr]; let intensity = 0; if (hasEntry) { const total = hasEntry.checklist.length; const done = hasEntry.checklist.filter(c => c.completed).length; if (total > 0) intensity = Math.ceil((done / total) * 4); else if (hasEntry.content.length > 10) intensity = 2; } days.push({ date: dateStr, intensity }); } return days; };
+            const handleDateClick = () => { if (dateInputRef.current) try { dateInputRef.current.showPicker(); } catch (e) { dateInputRef.current.focus(); } };
+
+            return (
+                <div className="max-w-5xl mx-auto relative">
+                    <ModuleHeader title="每日复盘" subtitle={data.dailySubtitle} setSubtitle={(val) => setData(prev => ({ ...prev, dailySubtitle: val }))} actionButton={<div className="flex gap-3 items-center"><div className="relative flex items-center gap-2 border-b border-stone-200 hover:border-stone-400 transition-colors px-1 py-1 cursor-pointer group" onClick={handleDateClick}><CalendarIcon size={14} className="text-stone-400 group-hover:text-stone-600" /><span className="text-sm font-medium text-stone-600">{selectedDate === getTodayString() ? "今天" : selectedDate}</span><input ref={dateInputRef} type="date" value={selectedDate} max={getTodayString()} onChange={(e) => setSelectedDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 pointer-events-none" /></div><button onClick={() => setShowTemplateSettings(true)} className="flex items-center gap-1.5 text-stone-400 hover:text-stone-800 text-xs font-medium px-2 py-1 rounded-md hover:bg-stone-50 transition-colors"><EditIcon size={12} /><span className="hidden sm:inline">习惯模板</span></button></div>} />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-4">
+                            <section className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100"><h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{selectedDate === getTodayString() ? "今日习惯" : `${selectedDate} 习惯`}</h3><div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{(entry.checklist.length ? entry.checklist : data.dailyTemplate.map(t => ({ text: t, completed: false }))).map((item, idx) => (<div key={idx} className={`flex items-center gap-2 cursor-pointer group p-2 rounded-xl transition-colors border ${item.completed ? 'bg-green-50 border-green-100' : 'bg-stone-50 border-transparent hover:bg-stone-100'}`} onClick={() => toggleCheck(idx)}><div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all duration-200 ${item.completed ? 'bg-green-500 border-green-500 text-white' : 'border-stone-300 text-transparent group-hover:border-stone-400'}`}><CheckCircle2Icon size={12} /></div><span className={`transition-colors text-sm ${item.completed ? 'text-stone-400 line-through' : 'text-stone-700'}`}>{item.text}</span></div>))}</div></section>
+                            <section className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 flex flex-col h-[320px]"><h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">思考与总结</h3><MarkdownEditor value={entry.content} onChange={val => updateEntry({ ...entry, content: val, updatedAt: Date.now() })} placeholder="此刻的想法 (Markdown)..." /><div className="text-right mt-1 text-[10px] text-stone-300">自动保存于 {new Date(entry.updatedAt).toLocaleTimeString()}</div></section>
+                        </div>
+                        <div className="space-y-4"><div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100"><h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2"><FlameIcon size={14} /> 连续性视图</h3><div className="grid grid-cols-7 gap-1.5">{getHeatmapData().map((d) => (<div key={d.date} title={`${d.date}`} onClick={() => setSelectedDate(d.date)} className={`w-full pt-[100%] rounded-md relative transition-all cursor-pointer hover:scale-110 ${d.intensity === 0 ? 'bg-stone-100' : d.intensity === 1 ? 'bg-green-200' : d.intensity === 2 ? 'bg-green-300' : d.intensity === 3 ? 'bg-green-400' : 'bg-green-500'} ${selectedDate === d.date ? 'ring-2 ring-stone-800 ring-offset-1' : ''}`}>{d.date === getTodayString() && <div className="absolute inset-0 border border-stone-400 rounded-md"></div>}</div>))}</div></div></div>
+                    </div>
+                    {showTemplateSettings && <TemplateSettingsModal data={data} setData={setData} onClose={() => setShowTemplateSettings(false)} type="daily" />}
+                </div>
+            );
+        };
+
+        const MonthlyModule = ({ data, setData }) => {
+            const currentMonth = getCurrentMonthString();
+            const [showTemplateSettings, setShowTemplateSettings] = useState(false);
+            const entry = data.monthlyEntries[currentMonth] || { id: currentMonth, checklist: data.monthlyTemplate.map(t => ({ text: t, completed: false })), content: '', updatedAt: Date.now() };
+            const updateEntry = (newEntry) => setData(prev => ({ ...prev, monthlyEntries: { ...prev.monthlyEntries, [currentMonth]: newEntry } }));
+            const displayChecklist = entry.checklist.length ? entry.checklist : data.monthlyTemplate.map(t => ({ text: t, completed: false }));
+            const updateChecklistItem = (idx, val) => { const newChecklist = [...displayChecklist]; newChecklist[idx].answer = val; updateEntry({ ...entry, checklist: newChecklist, updatedAt: Date.now() }); };
+            const getMonths = () => { const months = []; for (let i = 5; i >= 0; i--) { const d = new Date(); d.setMonth(d.getMonth() - i); const mStr = d.toISOString().slice(0, 7); const hasEntry = data.monthlyEntries[mStr]; months.push({ id: mStr, active: !!(hasEntry && hasEntry.content.length > 5) }); } return months; };
+
+            return (
+                <div className="max-w-4xl mx-auto">
+                    <ModuleHeader title="每月宏观总结" subtitle={data.monthlySubtitle} setSubtitle={(val) => setData(prev => ({ ...prev, monthlySubtitle: val }))} actionButton={<button onClick={() => setShowTemplateSettings(true)} className="flex items-center gap-1.5 text-stone-400 hover:text-stone-800 text-xs font-medium px-2 py-1 rounded-md hover:bg-stone-50 transition-colors"><EditIcon size={12} /><span className="hidden sm:inline">模板</span></button>} />
+                    <div className="flex flex-col gap-4">
+                        <div className="flex gap-2 overflow-x-auto pb-2">{getMonths().map(m => (<div key={m.id} className={`flex-shrink-0 px-3 py-1.5 text-sm rounded-lg border ${m.id === currentMonth ? 'bg-stone-800 text-white border-stone-800' : m.active ? 'bg-white border-stone-200 text-stone-600' : 'bg-stone-50 border-transparent text-stone-400'}`}>{m.id}</div>))}</div>
+                        <section className="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 min-h-[500px] flex flex-col relative overflow-hidden"><div className="absolute top-0 left-0 w-1.5 h-full bg-stone-900"></div><h2 className="text-xl font-serif text-stone-800 mb-4">{currentMonth} 月度报告</h2>
+                            <div className="space-y-4 flex-1">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{displayChecklist.map((item, idx) => (<div key={idx} className="p-3 bg-stone-50 rounded-xl"><h4 className="text-xs font-bold text-stone-500 mb-1">{item.text}</h4><input className="w-full bg-transparent border-b border-stone-200 focus:border-stone-400 outline-none py-1 transition-colors text-stone-800 text-sm" placeholder="点击输入..." value={item.answer || ''} onChange={(e) => updateChecklistItem(idx, e.target.value)} /></div>))}</div>
+                                <div className="h-px w-full bg-stone-100 my-2"></div>
+                                <MarkdownEditor value={entry.content} onChange={val => updateEntry({ ...entry, content: val, updatedAt: Date.now() })} placeholder="深度复盘 (Markdown)..." minHeight="300px" />
+                            </div>
+                        </section>
+                    </div>
+                    {showTemplateSettings && <TemplateSettingsModal data={data} setData={setData} onClose={() => setShowTemplateSettings(false)} type="monthly" />}
+                </div>
+            );
+        };
+
+        const GoalsModule = ({ data, setData }) => {
+            const [expandedId, setExpandedId] = useState(null);
+            
+            const addGoal = () => { 
+                const newGoal = { id: generateId(), title: '新的长远目标', details: '## 规划\n- [ ] 第一步', createdAt: Date.now() }; 
+                setData(prev => ({ ...prev, goals: [...prev.goals, newGoal] })); 
+                setExpandedId(newGoal.id); 
+            };
+            const updateGoal = (id, field, value) => setData(prev => ({ ...prev, goals: prev.goals.map(g => g.id === id ? { ...g, [field]: value } : g) }));
+            const deleteGoal = (e, id) => { 
+                e.stopPropagation(); 
+                if (confirm('放弃这个目标了吗？')) setData(prev => ({ ...prev, goals: prev.goals.filter(g => g.id !== id) })); 
+            };
+
+            return (
+                <div 
+                    className="max-w-5xl mx-auto min-h-screen" 
+                    onClick={() => setExpandedId(null)} // 1. 点击背景收起
+                >
+                    <ModuleHeader title="长远目标" subtitle={data.goalsTagline} setSubtitle={(val) => setData(prev => ({ ...prev, goalsTagline: val }))} actionButton={<button onClick={(e) => { e.stopPropagation(); addGoal(); }} className="bg-stone-900 text-white px-4 py-2 rounded-xl shadow-md shadow-stone-200 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 flex-shrink-0 text-sm"><PlusIcon size={16} /> 新增</button>} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
+                        {data.goals.map(goal => {
+                            const isExpanded = expandedId === goal.id;
+                            return (
+                                <motion.div 
+                                    key={goal.id} 
+                                    layout 
+                                    // 2. 卡片点击逻辑
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); // 阻止冒泡
+                                        if(!isExpanded) setExpandedId(goal.id); 
+                                    }} 
+                                    className={`bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden cursor-pointer transition-all duration-500 relative flex flex-col ${isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3 row-span-2 shadow-xl ring-1 ring-stone-900/5 min-h-[400px] cursor-default' : 'hover:shadow-md hover:-translate-y-1 h-40'}`}
+                                >
+                                    <div 
+                                        className="p-4 bg-stone-50 border-b border-stone-100 flex justify-between items-start gap-4 cursor-pointer" 
+                                        onClick={(e) => { if(isExpanded) { e.stopPropagation(); setExpandedId(null); } }} // 3. 标题栏点击收起
+                                    >
+                                         {isExpanded ? <input value={goal.title} onClick={e => e.stopPropagation()} onChange={e => updateGoal(goal.id, 'title', e.target.value)} className="text-xl font-bold text-stone-900 bg-transparent outline-none w-full" placeholder="目标标题" /> : <h3 className="text-lg font-bold text-stone-900 line-clamp-2 leading-tight">{goal.title}</h3>}
+                                         <button onClick={(e) => deleteGoal(e, goal.id)} className="p-1.5 text-stone-300 hover:text-red-500 rounded-lg transition-all z-10 flex-shrink-0"><Trash2Icon size={16} /></button>
+                                    </div>
+                                    
+                                    <div 
+                                        className="p-4 flex-1 relative flex flex-col overflow-hidden" 
+                                        onClick={e => e.stopPropagation()} // 4. 内容点击阻止收起
+                                        style={{ cursor: isExpanded ? 'auto' : 'pointer' }}
+                                    >
+                                        {isExpanded ? <MarkdownEditor value={goal.details} onChange={val => updateGoal(goal.id, 'details', val)} placeholder="详细规划..." minHeight="300px" /> : <div className="text-stone-500 line-clamp-3 text-xs leading-relaxed prose-editor" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(goal.details || '')) }} />}
+                                        {!isExpanded && <div className="absolute bottom-3 right-3"><div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 group-hover:bg-stone-200 transition-colors"><ChevronRightIcon size={14} /></div></div>}
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        const TemplateSettingsModal = ({ data, setData, onClose, type }) => {
+            const isDaily = type === 'daily';
+            const templateKey = isDaily ? 'dailyTemplate' : 'monthlyTemplate';
+            const [items, setItems] = useState([...data[templateKey]]);
+            const [newItem, setNewItem] = useState('');
+            const handleAdd = () => { if (!newItem.trim()) return; setItems([...items, newItem]); setNewItem(''); };
+            const handleDelete = (idx) => setItems(items.filter((_, i) => i !== idx));
+            const handleSave = () => {
+                setData(prev => {
+                    const newData = { ...prev, [templateKey]: items };
+                    if (isDaily) {
+                        const today = getTodayString();
+                        if (prev.dailyEntries[today]) {
+                            const statusMap = new Map(); prev.dailyEntries[today].checklist.forEach(i => statusMap.set(i.text, i.completed));
+                            newData.dailyEntries = { ...prev.dailyEntries, [today]: { ...prev.dailyEntries[today], checklist: items.map(text => ({ text, completed: statusMap.get(text) || false })) } };
+                        }
+                    } else {
+                        const m = getCurrentMonthString();
+                        if (prev.monthlyEntries[m]) {
+                             const ansMap = new Map(); prev.monthlyEntries[m].checklist.forEach(i => ansMap.set(i.text, i.answer));
+                             newData.monthlyEntries = { ...prev.monthlyEntries, [m]: { ...prev.monthlyEntries[m], checklist: items.map(text => ({ text, completed: false, answer: ansMap.get(text) || '' })) } };
+                        }
+                    }
+                    return newData;
+                });
+                onClose();
+            };
+
+            return (
+                <div className="fixed inset-0 bg-stone-900/20 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+                    <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl p-6 border border-stone-100" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-6"><h3 className="text-xl font-bold">自定义{isDaily ? '每日习惯' : '每月问答'}模板</h3><button onClick={onClose}><XIcon size={24} className="text-stone-400 hover:text-stone-800"/></button></div>
+                        <div className="space-y-2 max-h-[50vh] overflow-y-auto mb-6 pr-2">{items.map((item, idx) => (<div key={idx} className="flex items-center gap-3 bg-stone-50 p-2 rounded-xl"><span className="flex-1 text-stone-700 text-sm">{item}</span><button onClick={() => handleDelete(idx)} className="text-stone-400 hover:text-red-500"><Trash2Icon size={16}/></button></div>))}</div>
+                        <div className="flex gap-2 mb-6"><input value={newItem} onChange={e => setNewItem(e.target.value)} placeholder={isDaily ? "输入新习惯..." : "输入新问题..."} className="flex-1 px-4 py-2 border border-stone-200 rounded-xl outline-none focus:border-stone-800 text-sm" onKeyDown={e => e.key === 'Enter' && handleAdd()} /><button onClick={handleAdd} className="bg-stone-100 hover:bg-stone-200 px-3 py-2 rounded-xl font-medium"><PlusIcon size={18}/></button></div>
+                        <button onClick={handleSave} className="w-full bg-stone-900 text-white py-3 rounded-xl font-bold hover:bg-stone-800 transition-colors text-sm">保存并应用</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('todo');
+            const [data, setData] = useState(initialData);
+            const [showSettings, setShowSettings] = useState(false);
+            const [needsBackup, setNeedsBackup] = useState(false);
+            const [sidebarWidth, setSidebarWidth] = useState(240);
+            const startResizing = (e) => { e.preventDefault(); const startX = e.clientX; const startWidth = sidebarWidth; const doDrag = (ev) => { const newW = startWidth + ev.clientX - startX; if (newW > 80 && newW < 600) setSidebarWidth(newW); }; const stopDrag = () => { document.removeEventListener('mousemove', doDrag); document.removeEventListener('mouseup', stopDrag); }; document.addEventListener('mousemove', doDrag); document.addEventListener('mouseup', stopDrag); };
+
+            useEffect(() => { const saved = localStorage.getItem('mindflow_data'); if (saved) { try { const p = JSON.parse(saved); if(!p.settings) p.settings = { autoBackup: false, lastAutoBackupMonth: '' }; setData({ ...initialData, ...p }); } catch(e){} } }, []);
+            useEffect(() => { localStorage.setItem('mindflow_data', JSON.stringify(data)); setNeedsBackup((Date.now() - data.lastBackup) / (1000 * 60 * 60 * 24) > 30); const timer = setTimeout(() => { if (data.settings?.autoBackup && data.settings.lastAutoBackupMonth !== getCurrentMonthString()) { handleExport(true); setData(prev => ({ ...prev, settings: { ...prev.settings, lastAutoBackupMonth: getCurrentMonthString() } })); } }, 2000); return () => clearTimeout(timer); }, [data]);
+            const handleExport = (isAuto = false) => { const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = isAuto ? `todo_auto_${getTodayString()}.json` : `todo_backup_${getTodayString()}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); if (!isAuto) { setData(prev => ({ ...prev, lastBackup: Date.now() })); setNeedsBackup(false); } };
+            const handleImport = (e) => { const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { try { const imp = JSON.parse(ev.target.result); if (confirm('覆盖数据?')) { if(!imp.settings) imp.settings = {autoBackup:false, lastAutoBackupMonth:''}; setData(imp); setShowSettings(false); } } catch(err){ alert('错误'); } }; reader.readAsText(file); };
+            const isMobile = window.innerWidth < 768; const currentSidebarWidth = isMobile ? '80px' : `${sidebarWidth}px`;
+
+            return (
+                <div className="flex h-screen bg-stone-50 text-stone-800 selection:bg-stone-200">
+                    <nav style={{ width: currentSidebarWidth }} className="flex-shrink-0 bg-white border-r border-stone-200 flex flex-col justify-between py-6 shadow-sm z-10 overflow-hidden relative">
+                        <div className="flex flex-col gap-2 px-3">
+                            <div className="mb-6 px-2 flex items-center justify-center gap-3 overflow-hidden"><div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">T</div>{!isMobile && sidebarWidth > 150 && <span className="text-lg font-bold tracking-tight whitespace-nowrap">To-Do</span>}</div>
+                            <NavButton active={activeTab === 'todo'} onClick={() => setActiveTab('todo')} icon={<LayoutIcon size={20} />} label="待办事项" />
+                            <NavButton active={activeTab === 'daily'} onClick={() => setActiveTab('daily')} icon={<CalendarDaysIcon size={20} />} label="每日复盘" />
+                            <NavButton active={activeTab === 'monthly'} onClick={() => setActiveTab('monthly')} icon={<CalendarRangeIcon size={20} />} label="每月总结" />
+                            <NavButton active={activeTab === 'goals'} onClick={() => setActiveTab('goals')} icon={<TargetIcon size={20} />} label="长远目标" />
+                        </div>
+                        <div className="px-3"><button onClick={() => setShowSettings(true)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${needsBackup ? 'bg-red-50 text-red-600' : 'text-stone-500 hover:bg-stone-100'}`}><div className="relative flex-shrink-0"><SettingsIcon size={20} />{needsBackup && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}</div>{!isMobile && sidebarWidth > 150 && <span className="font-medium text-sm whitespace-nowrap">数据管理</span>}</button></div>
+                    </nav>
+                    <div className="resizer hidden md:block" onMouseDown={startResizing}></div>
+                    <main className="flex-1 overflow-hidden relative"><AnimatePresence mode="wait"><motion.div key={activeTab} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }} className="h-full w-full p-6 md:p-8 overflow-y-auto no-scrollbar">{activeTab === 'todo' ? <TodoModule data={data} setData={setData} /> : activeTab === 'daily' ? <DailyModule data={data} setData={setData} /> : activeTab === 'monthly' ? <MonthlyModule data={data} setData={setData} /> : <GoalsModule data={data} setData={setData} />}</motion.div></AnimatePresence></main>
+                    <AnimatePresence>
+                        {showSettings && (
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-stone-900/20 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
+                                <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 border border-stone-100" onClick={e => e.stopPropagation()}>
+                                    <h3 className="text-lg font-bold mb-1">数据安全中心</h3>
+                                    <p className="text-sm text-stone-500 mb-6">您的数据仅存储在本地浏览器中。</p>
+                                    <div className="mb-6 p-4 bg-stone-50 rounded-xl border border-stone-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-3"><SaveIcon size={20} className="text-stone-600"/><div><p className="font-bold text-sm text-stone-800">每月自动备份</p><p className="text-xs text-stone-500 max-w-[200px]">每月首次访问时自动下载备份。</p></div></div>
+                                        <div className="flex items-center justify-center"><ToggleSwitch checked={data.settings?.autoBackup} onChange={() => setData(prev => ({ ...prev, settings: { ...prev.settings, autoBackup: !prev.settings.autoBackup } }))} /></div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <button onClick={() => handleExport(false)} className="w-full flex items-center justify-center gap-2 p-3 bg-stone-900 text-white rounded-xl hover:bg-stone-800 active:scale-95 transition-all text-sm"><DownloadIcon size={18} /> 立即手动导出 (JSON)</button>
+                                        <div className="relative"><input type="file" accept=".json" onChange={handleImport} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" /><button className="w-full flex items-center justify-center gap-2 p-3 bg-stone-100 text-stone-700 rounded-xl hover:bg-stone-200 transition-all border border-stone-200 text-sm"><UploadIcon size={18} /> 从备份恢复数据</button></div>
+                                    </div>
+                                    <div className="mt-6 pt-6 border-t border-stone-100 text-xs text-stone-400 text-center">上次备份: {new Date(data.lastBackup).toLocaleDateString()}</div>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
