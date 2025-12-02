@@ -4,15 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>To-Do</title>
-    <!-- 内置 Base64 Favicon (深色圆角矩形 + 白色对勾) -->
     <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjMWMxOTE3Ii8+PHBhdGggZD0iTTI1IDUwIEw0MyA2OCBMNzUgMzIiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==" type="image/svg+xml">
-
-    <!-- 引入 JetBrains Mono 字体 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    
-    <!-- 核心库 -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -22,53 +17,18 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     
     <style>
-        /* --- 1. 字体策略 --- */
-        body {
-            font-family: 'JetBrains Mono', "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
-            font-weight: 400;
-            color: #292524;
-        }
-
-        /* 滚动条隐藏 */
+        body { font-family: 'JetBrains Mono', "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; font-weight: 400; color: #292524; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* 交互微调 */
         .resizer { width: 5px; cursor: col-resize; transition: background-color 0.2s; z-index: 50; }
         .resizer:hover, .resizer:active { background-color: #d6d3d1; }
         input:focus, textarea:focus, select:focus { outline: none; }
         input[type="date"]::-webkit-calendar-picker-indicator { display: none; }
-
-        /* --- 2. 开关动画 --- */
-        .switch-container {
-            width: 44px;
-            height: 24px;
-            background-color: #e5e7eb;
-            border-radius: 9999px;
-            position: relative;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        .switch-container.checked {
-            background-color: #1c1917;
-        }
-        .switch-handle {
-            width: 18px;
-            height: 18px;
-            background-color: white;
-            border-radius: 50%;
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            transition: left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
-        }
-        .switch-container.checked .switch-handle {
-            left: 23px;
-        }
-
-        /* --- 3. Markdown (Drake Black 风格) --- */
-        .prose-editor { font-size: 0.95rem; line-height: 1.75; }
+        .switch-container { width: 44px; height: 24px; background-color: #e5e7eb; border-radius: 9999px; position: relative; cursor: pointer; transition: background-color 0.3s ease; }
+        .switch-container.checked { background-color: #1c1917; }
+        .switch-handle { width: 18px; height: 18px; background-color: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1); box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+        .switch-container.checked .switch-handle { left: 23px; }
+        .prose-editor { font-size: 0.9rem; line-height: 1.75; }
         .prose-editor h1 { font-size: 1.8em; font-weight: 700; margin: 1em 0 0.6em; border-bottom: 2px solid #e7e5e4; padding-bottom: 0.3em; color: #000; }
         .prose-editor h2 { font-size: 1.5em; font-weight: 600; margin: 1em 0 0.6em; border-bottom: 1px solid #e7e5e4; padding-bottom: 0.3em; color: #1c1917; }
         .prose-editor h3 { font-size: 1.25em; font-weight: 600; margin: 1em 0 0.5em; }
@@ -80,7 +40,6 @@
         .prose-editor ul { list-style-type: disc; }
         .prose-editor ol { list-style-type: decimal; }
         .prose-editor a { color: #f97316; text-decoration: none; border-bottom: 1px dashed #f97316; }
-        .prose-editor a:hover { border-bottom-style: solid; }
         .prose-editor input[type="checkbox"] { margin-right: 0.5em; vertical-align: middle; accent-color: #f97316; }
         .prose-editor hr { border: 0; border-top: 2px dashed #d6d3d1; margin: 2em 0; }
     </style>
@@ -122,16 +81,17 @@
         const getCurrentMonthString = () => new Date().toISOString().slice(0, 7);
         const urgencyColor = { high: 'bg-rose-100 text-rose-700 border-rose-200', medium: 'bg-amber-100 text-amber-700 border-amber-200', low: 'bg-blue-100 text-blue-700 border-blue-200' };
         const urgencyLabel = { high: '紧急', medium: '适中', low: '暂缓' };
+        const DAILY_DEFAULT_TEMPLATE = `##### DO\n- \n\n##### UnDo\n- \n\n##### Thinking\n- `;
 
         const initialData = {
             todos: [
-                { id: '1', text: '体验 To-Do 的流畅交互', urgency: 'high', completed: false, createdAt: Date.now(), dueDate: '' },
-                { id: '2', text: '思考长远的人生目标', urgency: 'medium', completed: false, createdAt: Date.now(), dueDate: '' }
+                { id: '1', text: '体验 To-Do 的流畅交互', urgency: 'high', completed: false, createdAt: Date.now(), dueDate: '', details: '这里可以写更详细的备注...' },
+                { id: '2', text: '思考长远的人生目标', urgency: 'medium', completed: false, createdAt: Date.now(), dueDate: '', details: '' }
             ],
             dailyEntries: {},
             monthlyEntries: {},
             goals: [
-                { id: 'g1', title: '成为全栈开发者', details: '# 阶段一：基础\n- [ ] 学习 React 核心概念\n- [ ] 掌握 Tailwind CSS\n\n# 阶段二：进阶\n> 保持好奇心，不断探索。\n\n学习 Node.js 后端开发...', createdAt: Date.now() }
+                { id: 'g1', title: '成为全栈开发者', details: '# 阶段一：基础\n- [ ] 学习 React 核心概念\n- [ ] 掌握 Tailwind CSS', createdAt: Date.now() }
             ],
             dailyTemplate: ['阅读30分钟', '运动30分钟', '没有任何拖延'],
             monthlyTemplate: ['本月最重要的成就', '本月最大的遗憾', '下个月的重心'],
@@ -144,40 +104,28 @@
         };
 
         // --- Markdown Editor ---
-        const MarkdownEditor = ({ value, onChange, placeholder, minHeight = "200px" }) => {
+        const MarkdownEditor = ({ value, onChange, placeholder, minHeight = "200px", className = "" }) => {
             const [mode, setMode] = useState('preview');
             const [isEditing, setIsEditing] = useState(false);
             const textareaRef = useRef(null);
-
             const toggleMode = (e) => { e.stopPropagation(); setMode(mode === 'preview' ? 'source' : 'preview'); setIsEditing(false); };
-
             useEffect(() => { if (isEditing && textareaRef.current) textareaRef.current.focus(); }, [isEditing]);
-
             const renderMarkdown = useMemo(() => {
                 if (!value) return { __html: '<span class="text-stone-300 italic">' + placeholder + '</span>' };
-                try {
-                    marked.setOptions({ breaks: true, gfm: true });
-                    return { __html: DOMPurify.sanitize(marked.parse(value)) };
-                } catch (e) { return { __html: value }; }
+                try { marked.setOptions({ breaks: true, gfm: true }); return { __html: DOMPurify.sanitize(marked.parse(value)) }; } catch (e) { return { __html: value }; }
             }, [value, placeholder]);
-
-            const handleKeyDown = (e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                    setIsEditing(false);
-                }
-            };
+            const handleKeyDown = (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') setIsEditing(false); };
 
             if (mode === 'source') {
                 return (
-                    <div className="relative w-full h-full min-h-[inherit]" onClick={e => e.stopPropagation()}>
+                    <div className={`relative w-full h-full min-h-[inherit] ${className}`} onClick={e => e.stopPropagation()}>
                         <textarea value={value} onChange={(e) => onChange(e.target.value)} className="w-full h-full min-h-[inherit] resize-none outline-none text-stone-800 bg-stone-50 p-4 rounded-xl border border-stone-200 leading-relaxed font-mono text-sm" placeholder={placeholder} style={{ minHeight }} />
                         <button onClick={toggleMode} className="absolute top-2 right-2 bg-stone-200 hover:bg-stone-300 p-1.5 rounded-lg text-stone-600 transition-colors z-10"><EyeIcon size={16} /></button>
                     </div>
                 );
             }
-
             return (
-                <div className="relative group w-full min-h-[inherit]" style={{ minHeight }} onClick={e => e.stopPropagation()}>
+                <div className={`relative group w-full min-h-[inherit] ${className}`} style={{ minHeight }} onClick={e => e.stopPropagation()}>
                     {isEditing ? (
                         <div className="relative h-full">
                             <textarea ref={textareaRef} value={value} onChange={(e) => onChange(e.target.value)} onBlur={() => setIsEditing(false)} onKeyDown={handleKeyDown} className="w-full h-full min-h-[inherit] resize-none outline-none text-stone-800 bg-white p-4 rounded-xl border-2 border-stone-900/10 leading-relaxed font-mono text-sm shadow-inner" placeholder={placeholder} style={{ minHeight }} />
@@ -191,20 +139,9 @@
             );
         };
 
-        // --- Toggle ---
-        const ToggleSwitch = ({ checked, onChange }) => (
-            <div onClick={onChange} className={`switch-container ${checked ? 'checked' : ''}`}>
-                <div className="switch-handle"></div>
-            </div>
-        );
-
-        const NavButton = ({ active, onClick, icon, label }) => (
-            <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group flex-shrink-0 ${active ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`}>
-                <div className={`transition-transform duration-200 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>{icon}</div>
-                <span className="font-medium text-sm whitespace-nowrap overflow-hidden">{label}</span>
-            </button>
-        );
-
+        const ToggleSwitch = ({ checked, onChange }) => (<div onClick={onChange} className={`switch-container ${checked ? 'checked' : ''}`}><div className="switch-handle"></div></div>);
+        const NavButton = ({ active, onClick, icon, label }) => (<button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group flex-shrink-0 ${active ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`}><div className={`transition-transform duration-200 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>{icon}</div><span className="font-medium text-sm whitespace-nowrap overflow-hidden">{label}</span></button>);
+        
         const CustomSelect = ({ value, onChange }) => {
             const [isOpen, setIsOpen] = useState(false);
             const ref = useRef(null);
@@ -214,7 +151,7 @@
             return (
                 <div className="relative" ref={ref}>
                     <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 border-b border-stone-200 hover:border-stone-400 transition-colors px-1 py-2 text-xs font-medium text-stone-600 outline-none w-20 justify-between group"><span className={current?.color}>{current?.label}</span><ChevronDownIcon size={12} className={`text-stone-300 group-hover:text-stone-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} /></button>
-                    <AnimatePresence>{isOpen && <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute top-full mt-1 left-0 w-24 bg-white rounded-lg shadow-xl border border-stone-100 overflow-hidden z-50 py-1">{options.map(opt => (<button key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors flex items-center gap-2 ${value === opt.value ? 'bg-stone-50 text-stone-900' : 'hover:bg-stone-50 text-stone-500'}`}><span className={opt.color}>{opt.label}</span></button>))}</motion.div>}</AnimatePresence>
+                    <AnimatePresence>{isOpen && <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute bottom-full mb-1 left-0 w-24 bg-white rounded-lg shadow-xl border border-stone-100 overflow-hidden z-50 py-1">{options.map(opt => (<button key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors flex items-center gap-2 ${value === opt.value ? 'bg-stone-50 text-stone-900' : 'hover:bg-stone-50 text-stone-500'}`}><span className={opt.color}>{opt.label}</span></button>))}</motion.div>}</AnimatePresence>
                 </div>
             );
         };
@@ -229,29 +166,53 @@
             </header>
         );
 
-        // --- Modules ---
+        // --- TodoItem (Isolated) ---
+        const TodoItem = ({ todo, toggleTodo, deleteTodo, updateTodoDetails, urgencyColor, urgencyLabel, formatTime }) => {
+            const [isExpanded, setIsExpanded] = useState(false);
+            const dateInputRef = useRef(null);
+
+            const handleDateClick = (e) => { e.stopPropagation(); if (dateInputRef.current) { try { dateInputRef.current.showPicker(); } catch (e) { dateInputRef.current.focus(); } } };
+            const handleUrgencyChange = (newVal) => { updateTodoDetails(todo.id, { urgency: newVal }); };
+            const handleDateChange = (e) => { updateTodoDetails(todo.id, { dueDate: e.target.value }); };
+
+            return (
+                <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className={`rounded-xl border transition-all duration-300 ${isExpanded ? 'overflow-visible ring-1 ring-stone-200' : 'overflow-hidden'} ${todo.completed ? 'bg-stone-50 border-stone-100' : 'bg-white border-stone-100 shadow-sm hover:shadow-md'}`}>
+                    <div className="flex items-stretch min-h-[3.5rem]">
+                        <div className="flex-shrink-0 flex items-center justify-center px-4 cursor-pointer hover:bg-stone-100/50 transition-colors border-r border-transparent hover:border-stone-100" onClick={(e) => { e.stopPropagation(); toggleTodo(todo.id); }} title="点击切换完成状态"><div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all ${todo.completed ? 'bg-stone-400 border-stone-400 text-white' : 'border-stone-300 text-transparent hover:border-stone-800'}`}><CheckCircle2Icon size={12} /></div></div>
+                        <div className="flex-1 flex items-center cursor-pointer hover:bg-stone-50/30 transition-colors" onClick={() => setIsExpanded(!isExpanded)}>
+                            <div className="flex-1 px-4 py-3 min-w-0"><div className={`text-sm font-medium transition-all truncate ${todo.completed ? 'line-through text-stone-400' : 'text-stone-800'}`}>{todo.text}</div></div>
+                            <div className="flex items-center gap-3 px-4 py-3 border-l border-stone-100/50 w-48 justify-end text-stone-400"><div className="flex flex-col items-end gap-0.5">{!todo.completed && <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${urgencyColor[todo.urgency]}`}>{urgencyLabel[todo.urgency]}</span>}{(todo.completed && todo.completedAt) && <span className="text-[10px] text-stone-400 font-mono">{formatTime(todo.completedAt)}</span>}{(!todo.completed && todo.dueDate) && <div className="flex items-center gap-1 text-[10px] text-stone-400"><ClockIcon size={10} /><span>{todo.dueDate}</span></div>}</div><div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}><ChevronDownIcon size={16} /></div></div>
+                        </div>
+                    </div>
+                    <AnimatePresence>{isExpanded && (<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="border-t border-stone-100 bg-stone-50/30"><div className="p-4"><MarkdownEditor value={todo.details || ''} onChange={(val) => updateTodoDetails(todo.id, { details: val })} placeholder="添加详细备注 (Markdown)..." minHeight="150px" className="text-sm bg-white" /></div><div className="px-4 py-3 border-t border-stone-100 flex items-center justify-between bg-white rounded-b-xl relative z-20"><div className="flex items-center gap-4"><div className="relative flex items-center gap-2 border-b border-stone-200 hover:border-stone-400 transition-colors px-1 py-1 cursor-pointer group w-28" onClick={handleDateClick}><ClockIcon size={14} className="text-stone-400 group-hover:text-stone-600" /><span className={`text-xs font-medium truncate ${todo.dueDate ? 'text-stone-700' : 'text-stone-400'}`}>{todo.dueDate ? todo.dueDate : "截止日期"}</span><input ref={dateInputRef} type="date" value={todo.dueDate} onChange={handleDateChange} className="absolute inset-0 w-full h-full opacity-0 pointer-events-none" /></div><CustomSelect value={todo.urgency} onChange={handleUrgencyChange} /></div><button onClick={(e) => { e.stopPropagation(); deleteTodo(todo.id); }} className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="删除"><Trash2Icon size={16} /></button></div></motion.div>)}</AnimatePresence>
+                </motion.div>
+            );
+        };
+
         const TodoModule = ({ data, setData }) => {
             const [text, setText] = useState('');
             const [urgency, setUrgency] = useState('medium');
             const [dueDate, setDueDate] = useState('');
             const dateInputRef = useRef(null);
-            const addTodo = () => { if (!text.trim()) return; setData(prev => ({ ...prev, todos: [{ id: generateId(), text, urgency, dueDate, completed: false, createdAt: Date.now() }, ...prev.todos] })); setText(''); setDueDate(''); };
+            const updateTodoDetails = (id, updates) => { setData(prev => ({ ...prev, todos: prev.todos.map(t => t.id === id ? { ...t, ...updates } : t) })); };
+            const addTodo = () => { if (!text.trim()) return; setData(prev => ({ ...prev, todos: [{ id: generateId(), text, urgency, dueDate, completed: false, createdAt: Date.now(), details: '' }, ...prev.todos] })); setText(''); setDueDate(''); };
             const toggleTodo = (id) => setData(prev => ({ ...prev, todos: prev.todos.map(t => t.id === id ? { ...t, completed: !t.completed, completedAt: !t.completed ? Date.now() : undefined } : t) }));
             const deleteTodo = (id) => setData(prev => ({ ...prev, todos: prev.todos.filter(t => t.id !== id) }));
             const handleDateClick = () => { if (dateInputRef.current) try { dateInputRef.current.showPicker(); } catch (e) { dateInputRef.current.focus(); } };
             const sortedTodos = [...data.todos].sort((a, b) => { if (a.completed !== b.completed) return a.completed ? 1 : -1; if (!a.completed) { const order = { high: 0, medium: 1, low: 2 }; if (order[a.urgency] !== order[b.urgency]) return order[a.urgency] - order[b.urgency]; } return b.createdAt - a.createdAt; });
+            const formatTime = (timestamp) => new Date(timestamp).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
             return (
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-4xl mx-auto pb-20">
                     <ModuleHeader title="待办事项" subtitle={data.todoSubtitle} setSubtitle={(val) => setData(prev => ({ ...prev, todoSubtitle: val }))} />
                     <div className="bg-white p-3 rounded-2xl shadow-sm border border-stone-100 flex flex-col md:flex-row items-center gap-4 mb-4 transition-shadow">
-                        <input type="text" value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && addTodo()} placeholder="添加新任务..." className="flex-1 px-2 py-2 outline-none text-stone-700 bg-transparent placeholder:text-stone-400 text-base" />
+                        <input type="text" value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && addTodo()} placeholder="添加新任务..." className="flex-1 px-2 py-2 outline-none text-stone-700 bg-transparent placeholder:text-stone-400 text-sm font-medium" />
                         <div className="flex items-center gap-4 border-t md:border-t-0 border-stone-50 pt-2 md:pt-0">
                             <div className="relative flex items-center gap-2 border-b border-stone-200 hover:border-stone-400 transition-colors px-1 py-2 cursor-pointer group w-24" onClick={handleDateClick}><ClockIcon size={14} className="text-stone-400 group-hover:text-stone-600" /><span className={`text-xs font-medium truncate ${dueDate ? 'text-stone-700' : 'text-stone-400'}`}>{dueDate ? dueDate : "截止日期"}</span><input ref={dateInputRef} type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 pointer-events-none" /></div>
                             <CustomSelect value={urgency} onChange={setUrgency} /><button onClick={addTodo} className="w-8 h-8 bg-stone-900 text-white rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md shadow-stone-200 flex-shrink-0"><PlusIcon size={16} /></button>
                         </div>
                     </div>
-                    <div className="space-y-1"><AnimatePresence initial={false}>{sortedTodos.map(todo => (<motion.div key={todo.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all duration-300 ${todo.completed ? 'bg-stone-50 border-stone-100' : 'bg-white border-stone-100 shadow-sm hover:shadow-md'}`}><button onClick={() => toggleTodo(todo.id)} className="flex-shrink-0 p-1 -m-1 cursor-pointer"><div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all ${todo.completed ? 'bg-stone-400 border-stone-400 text-white' : 'border-stone-300 text-transparent hover:border-stone-800'}`}><CheckCircle2Icon size={12} /></div></button><div className="flex-1 min-w-0 flex flex-col justify-center"><div className={`text-base transition-all truncate ${todo.completed ? 'line-through text-stone-400' : 'text-stone-800'}`}>{todo.text}</div>{(todo.dueDate || (todo.completed && todo.completedAt)) && <div className="flex items-center gap-3 mt-0.5">{todo.dueDate && <div className={`flex items-center gap-1 text-[10px] ${todo.completed ? 'text-stone-300' : 'text-stone-400'}`}><ClockIcon size={10} /><span>{todo.dueDate}</span></div>}</div>}</div>{!todo.completed && <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${urgencyColor[todo.urgency]}`}>{urgencyLabel[todo.urgency]}</span>}<button onClick={() => deleteTodo(todo.id)} className="opacity-0 group-hover:opacity-100 p-2 text-stone-300 hover:text-red-500 rounded-lg transition-all"><Trash2Icon size={16} /></button></motion.div>))}</AnimatePresence></div>
+                    <div className="space-y-2"><AnimatePresence initial={false}>{sortedTodos.map(todo => (<TodoItem key={todo.id} todo={todo} toggleTodo={toggleTodo} deleteTodo={deleteTodo} updateTodoDetails={updateTodoDetails} urgencyColor={urgencyColor} urgencyLabel={urgencyLabel} formatTime={formatTime} />))}</AnimatePresence></div>
                 </div>
             );
         };
@@ -260,10 +221,10 @@
             const [selectedDate, setSelectedDate] = useState(getTodayString());
             const [showTemplateSettings, setShowTemplateSettings] = useState(false);
             const dateInputRef = useRef(null);
-            const entry = data.dailyEntries[selectedDate] || { id: selectedDate, checklist: data.dailyTemplate.map(t => ({ text: t, completed: false })), content: '', updatedAt: Date.now() };
+            const entry = useMemo(() => { let currentEntry = data.dailyEntries[selectedDate]; if (!currentEntry) { currentEntry = { id: selectedDate, checklist: data.dailyTemplate.map(t => ({ text: t, completed: false })), content: DAILY_DEFAULT_TEMPLATE, updatedAt: Date.now() }; } else if (!currentEntry.content) { currentEntry = { ...currentEntry, content: DAILY_DEFAULT_TEMPLATE }; } return currentEntry; }, [data.dailyEntries, selectedDate, data.dailyTemplate]);
             const updateEntry = (newEntry) => setData(prev => ({ ...prev, dailyEntries: { ...prev.dailyEntries, [selectedDate]: newEntry } }));
-            const toggleCheck = (index) => { const newChecklist = [...(entry.checklist.length ? entry.checklist : data.dailyTemplate.map(t => ({ text: t, completed: false })))]; newChecklist[index].completed = !newChecklist[index].completed; updateEntry({ ...entry, checklist: newChecklist, updatedAt: Date.now() }); };
-            const getHeatmapData = () => { const days = []; for (let i = 29; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const dateStr = d.toISOString().split('T')[0]; const hasEntry = data.dailyEntries[dateStr]; let intensity = 0; if (hasEntry) { const total = hasEntry.checklist.length; const done = hasEntry.checklist.filter(c => c.completed).length; if (total > 0) intensity = Math.ceil((done / total) * 4); else if (hasEntry.content.length > 10) intensity = 2; } days.push({ date: dateStr, intensity }); } return days; };
+            const toggleCheck = (index) => { const newChecklist = [...entry.checklist]; newChecklist[index].completed = !newChecklist[index].completed; updateEntry({ ...entry, checklist: newChecklist, updatedAt: Date.now() }); };
+            const getHeatmapData = () => { const days = []; for (let i = 29; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const dateStr = d.toISOString().split('T')[0]; const hasEntry = data.dailyEntries[dateStr]; let intensity = 0; if (hasEntry) { const total = hasEntry.checklist.length; const done = hasEntry.checklist.filter(c => c.completed).length; const habitScore = total > 0 ? (done / total) : 0; let habitLevel = 0; if(habitScore > 0) habitLevel = 1; if(habitScore > 0.5) habitLevel = 2; if(habitScore === 1) habitLevel = 3; const cleanContent = hasEntry.content.replace(/#|D|O|UnDo|Thinking|-|\s/g, ''); let textLevel = 0; if (cleanContent.length > 10) textLevel = 1; if (cleanContent.length > 100) textLevel = 2; intensity = Math.min(4, habitLevel + textLevel); if (intensity === 0 && cleanContent.length > 0) intensity = 1; } days.push({ date: dateStr, intensity }); } return days; };
             const handleDateClick = () => { if (dateInputRef.current) try { dateInputRef.current.showPicker(); } catch (e) { dateInputRef.current.focus(); } };
 
             return (
@@ -271,10 +232,10 @@
                     <ModuleHeader title="每日复盘" subtitle={data.dailySubtitle} setSubtitle={(val) => setData(prev => ({ ...prev, dailySubtitle: val }))} actionButton={<div className="flex gap-3 items-center"><div className="relative flex items-center gap-2 border-b border-stone-200 hover:border-stone-400 transition-colors px-1 py-1 cursor-pointer group" onClick={handleDateClick}><CalendarIcon size={14} className="text-stone-400 group-hover:text-stone-600" /><span className="text-sm font-medium text-stone-600">{selectedDate === getTodayString() ? "今天" : selectedDate}</span><input ref={dateInputRef} type="date" value={selectedDate} max={getTodayString()} onChange={(e) => setSelectedDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 pointer-events-none" /></div><button onClick={() => setShowTemplateSettings(true)} className="flex items-center gap-1.5 text-stone-400 hover:text-stone-800 text-xs font-medium px-2 py-1 rounded-md hover:bg-stone-50 transition-colors"><EditIcon size={12} /><span className="hidden sm:inline">习惯模板</span></button></div>} />
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 space-y-4">
-                            <section className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100"><h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{selectedDate === getTodayString() ? "今日习惯" : `${selectedDate} 习惯`}</h3><div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{(entry.checklist.length ? entry.checklist : data.dailyTemplate.map(t => ({ text: t, completed: false }))).map((item, idx) => (<div key={idx} className={`flex items-center gap-2 cursor-pointer group p-2 rounded-xl transition-colors border ${item.completed ? 'bg-green-50 border-green-100' : 'bg-stone-50 border-transparent hover:bg-stone-100'}`} onClick={() => toggleCheck(idx)}><div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all duration-200 ${item.completed ? 'bg-green-500 border-green-500 text-white' : 'border-stone-300 text-transparent group-hover:border-stone-400'}`}><CheckCircle2Icon size={12} /></div><span className={`transition-colors text-sm ${item.completed ? 'text-stone-400 line-through' : 'text-stone-700'}`}>{item.text}</span></div>))}</div></section>
-                            <section className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 flex flex-col h-[320px]"><h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">思考与总结</h3><MarkdownEditor value={entry.content} onChange={val => updateEntry({ ...entry, content: val, updatedAt: Date.now() })} placeholder="此刻的想法 (Markdown)..." /><div className="text-right mt-1 text-[10px] text-stone-300">自动保存于 {new Date(entry.updatedAt).toLocaleTimeString()}</div></section>
+                            <section className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100"><h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{selectedDate === getTodayString() ? "今日习惯" : `${selectedDate} 习惯`}</h3><div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{(entry.checklist.length ? entry.checklist : data.dailyTemplate.map(t => ({ text: t, completed: false }))).map((item, idx) => (<div key={idx} className={`flex items-center gap-2 cursor-pointer group p-2 rounded-xl transition-colors border ${item.completed ? 'bg-emerald-50 border-emerald-100' : 'bg-stone-50 border-transparent hover:bg-stone-100'}`} onClick={() => toggleCheck(idx)}><div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all duration-200 ${item.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 text-transparent group-hover:border-stone-400'}`}><CheckCircle2Icon size={12} /></div><span className={`transition-colors text-sm ${item.completed ? 'text-stone-400 line-through' : 'text-stone-700'}`}>{item.text}</span></div>))}</div></section>
+                            <section className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 flex flex-col min-h-[320px] h-auto"><h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">思考与总结</h3><MarkdownEditor className="text-sm" value={entry.content} onChange={val => updateEntry({ ...entry, content: val, updatedAt: Date.now() })} placeholder="此刻的想法 (Markdown)..." /><div className="text-right mt-1 text-[10px] text-stone-300">自动保存于 {new Date(entry.updatedAt).toLocaleTimeString()}</div></section>
                         </div>
-                        <div className="space-y-4"><div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100"><h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2"><FlameIcon size={14} /> 连续性视图</h3><div className="grid grid-cols-7 gap-1.5">{getHeatmapData().map((d) => (<div key={d.date} title={`${d.date}`} onClick={() => setSelectedDate(d.date)} className={`w-full pt-[100%] rounded-md relative transition-all cursor-pointer hover:scale-110 ${d.intensity === 0 ? 'bg-stone-100' : d.intensity === 1 ? 'bg-green-200' : d.intensity === 2 ? 'bg-green-300' : d.intensity === 3 ? 'bg-green-400' : 'bg-green-500'} ${selectedDate === d.date ? 'ring-2 ring-stone-800 ring-offset-1' : ''}`}>{d.date === getTodayString() && <div className="absolute inset-0 border border-stone-400 rounded-md"></div>}</div>))}</div></div></div>
+                        <div className="space-y-4"><div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100"><h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2"><FlameIcon size={14} /> 连续性视图</h3><div className="grid grid-cols-7 gap-1.5">{getHeatmapData().map((d) => (<div key={d.date} title={`${d.date}`} onClick={() => setSelectedDate(d.date)} className={`w-full pt-[100%] rounded-md relative transition-all cursor-pointer hover:scale-110 ${d.intensity === 0 ? 'bg-stone-100' : d.intensity === 1 ? 'bg-emerald-200' : d.intensity === 2 ? 'bg-emerald-300' : d.intensity === 3 ? 'bg-emerald-400' : 'bg-emerald-600'} ${selectedDate === d.date ? 'ring-2 ring-stone-800 ring-offset-1' : ''}`}>{d.date === getTodayString() && <div className="absolute inset-0 border border-stone-400 rounded-md"></div>}</div>))}</div></div></div>
                     </div>
                     {showTemplateSettings && <TemplateSettingsModal data={data} setData={setData} onClose={() => setShowTemplateSettings(false)} type="daily" />}
                 </div>
@@ -282,20 +243,77 @@
         };
 
         const MonthlyModule = ({ data, setData }) => {
-            const currentMonth = getCurrentMonthString();
+            // 1. 状态：当前选中的月份（默认为本月）
+            const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthString());
             const [showTemplateSettings, setShowTemplateSettings] = useState(false);
-            const entry = data.monthlyEntries[currentMonth] || { id: currentMonth, checklist: data.monthlyTemplate.map(t => ({ text: t, completed: false })), content: '', updatedAt: Date.now() };
-            const updateEntry = (newEntry) => setData(prev => ({ ...prev, monthlyEntries: { ...prev.monthlyEntries, [currentMonth]: newEntry } }));
+
+            // 2. 数据获取：根据 selectedMonth 动态获取
+            const entry = useMemo(() => {
+                let currentEntry = data.monthlyEntries[selectedMonth];
+                if (!currentEntry) {
+                    // 如果该月没有数据，初始化一个空对象（类似每日复盘逻辑）
+                    currentEntry = { 
+                        id: selectedMonth, 
+                        checklist: data.monthlyTemplate.map(t => ({ text: t, completed: false })), 
+                        content: '', 
+                        updatedAt: Date.now() 
+                    };
+                }
+                return currentEntry;
+            }, [data.monthlyEntries, selectedMonth, data.monthlyTemplate]);
+
+            // 3. 更新逻辑：写入到 selectedMonth
+            const updateEntry = (newEntry) => {
+                setData(prev => ({
+                    ...prev,
+                    monthlyEntries: { ...prev.monthlyEntries, [selectedMonth]: newEntry }
+                }));
+            };
+
             const displayChecklist = entry.checklist.length ? entry.checklist : data.monthlyTemplate.map(t => ({ text: t, completed: false }));
             const updateChecklistItem = (idx, val) => { const newChecklist = [...displayChecklist]; newChecklist[idx].answer = val; updateEntry({ ...entry, checklist: newChecklist, updatedAt: Date.now() }); };
-            const getMonths = () => { const months = []; for (let i = 5; i >= 0; i--) { const d = new Date(); d.setMonth(d.getMonth() - i); const mStr = d.toISOString().slice(0, 7); const hasEntry = data.monthlyEntries[mStr]; months.push({ id: mStr, active: !!(hasEntry && hasEntry.content.length > 5) }); } return months; };
+            
+            // 4. 导航栏逻辑：生成过去 5 个月 + 当前月
+            const getMonths = () => { 
+                const months = []; 
+                for (let i = 5; i >= 0; i--) { 
+                    const d = new Date(); d.setMonth(d.getMonth() - i); 
+                    const mStr = d.toISOString().slice(0, 7); 
+                    const hasEntry = data.monthlyEntries[mStr]; 
+                    // 活跃状态：有内容或有回答
+                    const active = !!(hasEntry && (hasEntry.content.length > 0 || hasEntry.checklist.some(c => c.answer)));
+                    months.push({ id: mStr, active }); 
+                } 
+                return months; 
+            };
 
             return (
                 <div className="max-w-4xl mx-auto">
                     <ModuleHeader title="每月宏观总结" subtitle={data.monthlySubtitle} setSubtitle={(val) => setData(prev => ({ ...prev, monthlySubtitle: val }))} actionButton={<button onClick={() => setShowTemplateSettings(true)} className="flex items-center gap-1.5 text-stone-400 hover:text-stone-800 text-xs font-medium px-2 py-1 rounded-md hover:bg-stone-50 transition-colors"><EditIcon size={12} /><span className="hidden sm:inline">模板</span></button>} />
                     <div className="flex flex-col gap-4">
-                        <div className="flex gap-2 overflow-x-auto pb-2">{getMonths().map(m => (<div key={m.id} className={`flex-shrink-0 px-3 py-1.5 text-sm rounded-lg border ${m.id === currentMonth ? 'bg-stone-800 text-white border-stone-800' : m.active ? 'bg-white border-stone-200 text-stone-600' : 'bg-stone-50 border-transparent text-stone-400'}`}>{m.id}</div>))}</div>
-                        <section className="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 min-h-[500px] flex flex-col relative overflow-hidden"><div className="absolute top-0 left-0 w-1.5 h-full bg-stone-900"></div><h2 className="text-xl font-serif text-stone-800 mb-4">{currentMonth} 月度报告</h2>
+                        <div className="flex gap-2 overflow-x-auto pb-2">
+                            {getMonths().map(m => (
+                                <button // 改为 button，支持点击切换
+                                    key={m.id} 
+                                    onClick={() => setSelectedMonth(m.id)}
+                                    className={`flex-shrink-0 px-3 py-1.5 text-sm rounded-lg border transition-all ${
+                                        m.id === selectedMonth 
+                                            ? 'bg-stone-800 text-white border-stone-800 shadow-md' // 选中状态：深色高亮
+                                            : m.active 
+                                                ? 'bg-white border-stone-200 text-stone-600 hover:border-stone-300' // 有数据状态
+                                                : 'bg-stone-50 border-transparent text-stone-400 hover:bg-stone-100' // 无数据状态
+                                    }`}
+                                >
+                                    {m.id}
+                                </button>
+                            ))}
+                        </div>
+                        
+                        {/* 标题动态显示选中的月份 */}
+                        <section className="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 min-h-[500px] flex flex-col relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-1.5 h-full bg-stone-900"></div>
+                            <h2 className="text-xl font-serif text-stone-800 mb-4">{selectedMonth} 月度报告</h2>
+                            
                             <div className="space-y-4 flex-1">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{displayChecklist.map((item, idx) => (<div key={idx} className="p-3 bg-stone-50 rounded-xl"><h4 className="text-xs font-bold text-stone-500 mb-1">{item.text}</h4><input className="w-full bg-transparent border-b border-stone-200 focus:border-stone-400 outline-none py-1 transition-colors text-stone-800 text-sm" placeholder="点击输入..." value={item.answer || ''} onChange={(e) => updateChecklistItem(idx, e.target.value)} /></div>))}</div>
                                 <div className="h-px w-full bg-stone-100 my-2"></div>
@@ -310,51 +328,23 @@
 
         const GoalsModule = ({ data, setData }) => {
             const [expandedId, setExpandedId] = useState(null);
-            
-            const addGoal = () => { 
-                const newGoal = { id: generateId(), title: '新的长远目标', details: '## 规划\n- [ ] 第一步', createdAt: Date.now() }; 
-                setData(prev => ({ ...prev, goals: [...prev.goals, newGoal] })); 
-                setExpandedId(newGoal.id); 
-            };
+            const addGoal = () => { const newGoal = { id: generateId(), title: '新的长远目标', details: '## 规划\n- [ ] 第一步', createdAt: Date.now() }; setData(prev => ({ ...prev, goals: [...prev.goals, newGoal] })); setExpandedId(newGoal.id); };
             const updateGoal = (id, field, value) => setData(prev => ({ ...prev, goals: prev.goals.map(g => g.id === id ? { ...g, [field]: value } : g) }));
-            const deleteGoal = (e, id) => { 
-                e.stopPropagation(); 
-                if (confirm('放弃这个目标了吗？')) setData(prev => ({ ...prev, goals: prev.goals.filter(g => g.id !== id) })); 
-            };
+            const deleteGoal = (e, id) => { e.stopPropagation(); if (confirm('放弃这个目标了吗？')) setData(prev => ({ ...prev, goals: prev.goals.filter(g => g.id !== id) })); };
 
             return (
-                <div 
-                    className="max-w-5xl mx-auto min-h-screen" 
-                    onClick={() => setExpandedId(null)} // 1. 点击背景收起
-                >
+                <div className="max-w-5xl mx-auto min-h-screen" onClick={() => setExpandedId(null)}>
                     <ModuleHeader title="长远目标" subtitle={data.goalsTagline} setSubtitle={(val) => setData(prev => ({ ...prev, goalsTagline: val }))} actionButton={<button onClick={(e) => { e.stopPropagation(); addGoal(); }} className="bg-stone-900 text-white px-4 py-2 rounded-xl shadow-md shadow-stone-200 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 flex-shrink-0 text-sm"><PlusIcon size={16} /> 新增</button>} />
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
                         {data.goals.map(goal => {
                             const isExpanded = expandedId === goal.id;
                             return (
-                                <motion.div 
-                                    key={goal.id} 
-                                    layout 
-                                    // 2. 卡片点击逻辑
-                                    onClick={(e) => { 
-                                        e.stopPropagation(); // 阻止冒泡
-                                        if(!isExpanded) setExpandedId(goal.id); 
-                                    }} 
-                                    className={`bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden cursor-pointer transition-all duration-500 relative flex flex-col ${isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3 row-span-2 shadow-xl ring-1 ring-stone-900/5 min-h-[400px] cursor-default' : 'hover:shadow-md hover:-translate-y-1 h-40'}`}
-                                >
-                                    <div 
-                                        className="p-4 bg-stone-50 border-b border-stone-100 flex justify-between items-start gap-4 cursor-pointer" 
-                                        onClick={(e) => { if(isExpanded) { e.stopPropagation(); setExpandedId(null); } }} // 3. 标题栏点击收起
-                                    >
+                                <motion.div key={goal.id} layout onClick={(e) => { e.stopPropagation(); if(!isExpanded) setExpandedId(goal.id); }} className={`bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden cursor-pointer transition-all duration-500 relative flex flex-col ${isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3 row-span-2 shadow-xl ring-1 ring-stone-900/5 min-h-[400px] cursor-default' : 'hover:shadow-md hover:-translate-y-1 h-40'}`}>
+                                    <div className="p-4 bg-stone-50 border-b border-stone-100 flex justify-between items-start gap-4 cursor-pointer" onClick={(e) => { if(isExpanded) { e.stopPropagation(); setExpandedId(null); } }}>
                                          {isExpanded ? <input value={goal.title} onClick={e => e.stopPropagation()} onChange={e => updateGoal(goal.id, 'title', e.target.value)} className="text-xl font-bold text-stone-900 bg-transparent outline-none w-full" placeholder="目标标题" /> : <h3 className="text-lg font-bold text-stone-900 line-clamp-2 leading-tight">{goal.title}</h3>}
                                          <button onClick={(e) => deleteGoal(e, goal.id)} className="p-1.5 text-stone-300 hover:text-red-500 rounded-lg transition-all z-10 flex-shrink-0"><Trash2Icon size={16} /></button>
                                     </div>
-                                    
-                                    <div 
-                                        className="p-4 flex-1 relative flex flex-col overflow-hidden" 
-                                        onClick={e => e.stopPropagation()} // 4. 内容点击阻止收起
-                                        style={{ cursor: isExpanded ? 'auto' : 'pointer' }}
-                                    >
+                                    <div className="p-4 flex-1 relative flex flex-col overflow-hidden" onClick={e => e.stopPropagation()} style={{ cursor: isExpanded ? 'auto' : 'pointer' }}>
                                         {isExpanded ? <MarkdownEditor value={goal.details} onChange={val => updateGoal(goal.id, 'details', val)} placeholder="详细规划..." minHeight="300px" /> : <div className="text-stone-500 line-clamp-3 text-xs leading-relaxed prose-editor" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(goal.details || '')) }} />}
                                         {!isExpanded && <div className="absolute bottom-3 right-3"><div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 group-hover:bg-stone-200 transition-colors"><ChevronRightIcon size={14} /></div></div>}
                                     </div>
