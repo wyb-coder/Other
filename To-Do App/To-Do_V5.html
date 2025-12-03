@@ -129,6 +129,16 @@
             { name: 'Indigo', class: 'bg-indigo-600 text-white' },
             { name: 'Cyan', class: 'bg-cyan-600 text-white' },
         ];
+        
+        // 糖果色系
+        const CHART_BAR_COLORS = [
+            'bg-red-400 dark:bg-red-600', 'bg-orange-400 dark:bg-orange-600', 'bg-amber-400 dark:bg-amber-600',
+            'bg-yellow-400 dark:bg-yellow-600', 'bg-lime-400 dark:bg-lime-600', 'bg-green-400 dark:bg-green-600',
+            'bg-emerald-400 dark:bg-emerald-600', 'bg-teal-400 dark:bg-teal-600', 'bg-cyan-400 dark:bg-cyan-600',
+            'bg-sky-400 dark:bg-sky-600', 'bg-blue-400 dark:bg-blue-600', 'bg-indigo-400 dark:bg-indigo-600',
+            'bg-violet-400 dark:bg-violet-600', 'bg-purple-400 dark:bg-purple-600', 'bg-fuchsia-400 dark:bg-fuchsia-600',
+            'bg-pink-400 dark:bg-pink-600', 'bg-rose-400 dark:bg-rose-600'
+        ];
 
         const initialData = {
             todos: [{ id: '1', text: '体验 To-Do 的流畅交互', urgency: 'high', completed: false, createdAt: Date.now(), dueDate: '', details: '这里可以写更详细的备注...' }],
@@ -192,11 +202,27 @@
             const [isRunning, setIsRunning] = useState(false); 
             const [quoteIndex, setQuoteIndex] = useState(0); 
             const [realTime, setRealTime] = useState(new Date()); 
+            const [startTimestamp, setStartTimestamp] = useState(null);
             
             useEffect(() => { const root = document.documentElement; const wasDark = root.classList.contains('dark'); if (!wasDark) root.classList.add('dark'); return () => { if (!wasDark) root.classList.remove('dark'); }; }, []); 
             useEffect(() => { const t = setInterval(() => setRealTime(new Date()), 1000); return () => clearInterval(t); }, []); 
             useEffect(() => { const i = setInterval(() => setQuoteIndex(prev => (prev + 1) % quotes.length), 30000); return () => clearInterval(i); }, [quotes]); 
-            useEffect(() => { if (!isRunning) return; const i = setInterval(() => { setTimeLeft(prev => { if (prev <= 1) { clearInterval(i); onComplete(); return 0; } return prev - 1; }); }, 1000); return () => clearInterval(i); }, [isRunning, onComplete]); 
+            
+            useEffect(() => {
+                if (isRunning && !startTimestamp) { setStartTimestamp(Date.now()); }
+            }, [isRunning, startTimestamp]);
+            
+            useEffect(() => {
+                if (!isRunning || !startTimestamp) return;
+                const updateTimer = () => {
+                    const elapsed = Math.floor((Date.now() - startTimestamp) / 1000);
+                    const remaining = Math.max(0, duration * 60 - elapsed);
+                    setTimeLeft(remaining);
+                    if (remaining === 0) { onComplete(); }
+                };
+                updateTimer(); const interval = setInterval(updateTimer, 1000);
+                return () => clearInterval(interval);
+            }, [isRunning, startTimestamp, duration, onComplete]); 
             
             const m = Math.floor(timeLeft / 60); const s = timeLeft % 60; 
             
@@ -348,16 +374,40 @@
                 else if (maxVal < 20) maxVal = 20; // Force minimum scale for small values to look good
                 
                 return (
-                    <div className="flex items-end justify-between gap-1 w-full" style={{ height }}>
-                        {data.map((d, i) => (
-                            <div key={i} className="flex flex-col items-center flex-1 group relative">
-                                <div className="w-full bg-stone-100 dark:bg-stone-800 rounded-t-sm relative overflow-hidden group-hover:bg-stone-200 dark:group-hover:bg-stone-700 transition-colors" style={{ height: `${(d.value / maxVal) * 100}%` }}>
-                                    <div className="absolute bottom-0 left-0 w-full bg-stone-800 dark:bg-stone-200 opacity-80 h-full transition-all duration-500 ease-out"></div>
+                    <div className="flex items-end justify-between gap-1 w-full pl-4 pb-6 relative" style={{ height }}>
+                        {/* Y-Axis Labels */}
+                        <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[10px] text-stone-300 dark:text-stone-600">
+                            <span>{maxVal}</span>
+                            <span>{Math.round(maxVal/2)}</span>
+                            <span>0</span>
+                        </div>
+
+                        {data.map((d, i) => {
+                            const barHeight = `${(d.value / maxVal) * 100}%`;
+                            const visualHeight = d.value === 0 ? '4px' : barHeight; // Fixed base for 0 values
+                            const colorIndex = (i * 7) % CHART_BAR_COLORS.length; // Randomize color
+                            const barColor = CHART_BAR_COLORS[colorIndex];
+
+                            return (
+                                <div key={i} className="flex flex-col items-center flex-1 group relative z-10 h-full justify-end">
+                                    {/* Tooltip */}
+                                    <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 left-1/2 -translate-x-1/2">
+                                        <div className="bg-stone-900 text-white text-xs px-3 py-2 rounded-lg shadow-xl whitespace-nowrap relative">
+                                            {d.tooltip}
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-stone-900"></div>
+                                        </div>
+                                    </div>
+                                    {/* Bar - Corrected: Base always has color, opacity changes */}
+                                    <div 
+                                        className={`w-full rounded-t-sm relative overflow-hidden transition-all duration-300 group-hover:w-[140%] group-hover:rounded-sm group-hover:z-30 ${barColor} ${d.value === 0 ? 'opacity-30' : 'opacity-90'} group-hover:opacity-100`} 
+                                        style={{ height: visualHeight }} 
+                                    >
+                                    </div>
+                                    {/* X-Axis Label (Simplified: Show 1, 5, 10...) */}
+                                    { (i+1)%5 === 1 && <span className="text-[10px] text-stone-400 mt-2 scale-75 origin-top absolute top-full pt-1">{d.label}</span> }
                                 </div>
-                                <span className="text-[10px] text-stone-400 mt-1 scale-75 origin-top">{d.label}</span>
-                                <div className="absolute bottom-full mb-1 bg-stone-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 left-1/2 -translate-x-1/2">{d.tooltip}</div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 );
             };
@@ -373,7 +423,7 @@
             };
 
             const handleDeleteCard = (id) => {
-                setData(prev => ({ ...prev, focus: { ...prev.focus, cards: prev.focus.cards.filter(c => c.id !== id) } })); setEditingCard(null);
+                 setData(prev => ({ ...prev, focus: { ...prev.focus, cards: prev.focus.cards.filter(c => c.id !== id) } })); setEditingCard(null); 
             };
 
             return (

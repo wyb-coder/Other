@@ -106,13 +106,10 @@
 
         // --- Utils ---
         const generateId = () => Math.random().toString(36).substr(2, 9);
-        
-        // 修复：彻底使用本地时间构造 YYYY-MM-DD，解决时区错位
         const getTodayString = () => {
             const d = new Date();
             return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         };
-        
         const getCurrentMonthString = () => {
              const d = new Date();
              return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
@@ -133,25 +130,14 @@
             { name: 'Cyan', class: 'bg-cyan-600 text-white' },
         ];
         
-        // 糖果色系图表配色
+        // 糖果色系
         const CHART_BAR_COLORS = [
-            'bg-red-400 dark:bg-red-600',
-            'bg-orange-400 dark:bg-orange-600',
-            'bg-amber-400 dark:bg-amber-600',
-            'bg-yellow-400 dark:bg-yellow-600',
-            'bg-lime-400 dark:bg-lime-600',
-            'bg-green-400 dark:bg-green-600',
-            'bg-emerald-400 dark:bg-emerald-600',
-            'bg-teal-400 dark:bg-teal-600',
-            'bg-cyan-400 dark:bg-cyan-600',
-            'bg-sky-400 dark:bg-sky-600',
-            'bg-blue-400 dark:bg-blue-600',
-            'bg-indigo-400 dark:bg-indigo-600',
-            'bg-violet-400 dark:bg-violet-600',
-            'bg-purple-400 dark:bg-purple-600',
-            'bg-fuchsia-400 dark:bg-fuchsia-600',
-            'bg-pink-400 dark:bg-pink-600',
-            'bg-rose-400 dark:bg-rose-600',
+            'bg-red-400 dark:bg-red-600', 'bg-orange-400 dark:bg-orange-600', 'bg-amber-400 dark:bg-amber-600',
+            'bg-yellow-400 dark:bg-yellow-600', 'bg-lime-400 dark:bg-lime-600', 'bg-green-400 dark:bg-green-600',
+            'bg-emerald-400 dark:bg-emerald-600', 'bg-teal-400 dark:bg-teal-600', 'bg-cyan-400 dark:bg-cyan-600',
+            'bg-sky-400 dark:bg-sky-600', 'bg-blue-400 dark:bg-blue-600', 'bg-indigo-400 dark:bg-indigo-600',
+            'bg-violet-400 dark:bg-violet-600', 'bg-purple-400 dark:bg-purple-600', 'bg-fuchsia-400 dark:bg-fuchsia-600',
+            'bg-pink-400 dark:bg-pink-600', 'bg-rose-400 dark:bg-rose-600'
         ];
 
         const initialData = {
@@ -216,11 +202,27 @@
             const [isRunning, setIsRunning] = useState(false); 
             const [quoteIndex, setQuoteIndex] = useState(0); 
             const [realTime, setRealTime] = useState(new Date()); 
+            const [startTimestamp, setStartTimestamp] = useState(null);
             
             useEffect(() => { const root = document.documentElement; const wasDark = root.classList.contains('dark'); if (!wasDark) root.classList.add('dark'); return () => { if (!wasDark) root.classList.remove('dark'); }; }, []); 
             useEffect(() => { const t = setInterval(() => setRealTime(new Date()), 1000); return () => clearInterval(t); }, []); 
             useEffect(() => { const i = setInterval(() => setQuoteIndex(prev => (prev + 1) % quotes.length), 30000); return () => clearInterval(i); }, [quotes]); 
-            useEffect(() => { if (!isRunning) return; const i = setInterval(() => { setTimeLeft(prev => { if (prev <= 1) { clearInterval(i); onComplete(); return 0; } return prev - 1; }); }, 1000); return () => clearInterval(i); }, [isRunning, onComplete]); 
+            
+            useEffect(() => {
+                if (isRunning && !startTimestamp) { setStartTimestamp(Date.now()); }
+            }, [isRunning, startTimestamp]);
+            
+            useEffect(() => {
+                if (!isRunning || !startTimestamp) return;
+                const updateTimer = () => {
+                    const elapsed = Math.floor((Date.now() - startTimestamp) / 1000);
+                    const remaining = Math.max(0, duration * 60 - elapsed);
+                    setTimeLeft(remaining);
+                    if (remaining === 0) { onComplete(); }
+                };
+                updateTimer(); const interval = setInterval(updateTimer, 1000);
+                return () => clearInterval(interval);
+            }, [isRunning, startTimestamp, duration, onComplete]); 
             
             const m = Math.floor(timeLeft / 60); const s = timeLeft % 60; 
             
@@ -230,7 +232,6 @@
                         <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-orange-500/20 rounded-full blur-3xl animate-blob mix-blend-screen pointer-events-none"></div>
                         <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl animate-blob animation-delay-2000 mix-blend-screen pointer-events-none"></div>
                         
-                        {/* Enhanced Top Right Clock */}
                         <div className="absolute top-8 right-8 opacity-90 flex flex-col items-center gap-1 scale-110 origin-top-right">
                              <div className="w-20 h-20 rounded-full border-2 border-white/20 flex items-center justify-center relative shadow-lg bg-black/30 backdrop-blur-sm">
                                 <div className="absolute w-0.5 h-6 bg-white top-1/2 left-1/2 -translate-x-1/2 origin-top -translate-y-[1px]" style={{ transform: `rotate(${(realTime.getHours()%12)*30 + realTime.getMinutes()*0.5}deg)` }}></div>
@@ -366,36 +367,15 @@
 
             const SimpleBarChart = ({ data, height = 150 }) => {
                 if (!data || data.length === 0) return <div className="h-32 flex items-center justify-center text-stone-300 text-xs">暂无数据</div>;
-                // 1. 计算真实最大值
-                const actualMax = Math.max(...data.map(d => d.value));
+                // Fix scaling: Ensure a reasonable range if values are small
+                let maxVal = Math.max(...data.map(d => d.value));
+                if (maxVal === 0) maxVal = 10; // Default scale if empty
+                else if (maxVal < 20) maxVal = 20; // Force minimum scale for small values to look good
                 
-                // 2. 智能自适应上限算法
-                let maxVal;
-                if (actualMax === 0) {
-                    maxVal = 10; // 全为0时，上限为10
-                } else if (actualMax <= 10) {
-                    maxVal = Math.max(actualMax * 1.5, 10); // 小数据：扩大1.5倍，最小10
-                } else if (actualMax <= 30) {
-                    maxVal = Math.ceil(actualMax * 1.3); // 中等数据：扩大1.3倍
-                } else {
-                    maxVal = Math.ceil((actualMax + 20) / 10) * 10; // 大数据：+20后向上取整到10的倍数
-                }
-
-                // 3. 随机颜色选择函数，确保与前一个不同
-                const getRandomColor = (prevColor) => {
-                    let newColor;
-                    do {
-                        newColor = CHART_BAR_COLORS[Math.floor(Math.random() * CHART_BAR_COLORS.length)];
-                    } while (newColor === prevColor && CHART_BAR_COLORS.length > 1);
-                    return newColor;
-                };
-
-                let lastColor = '';
-
                 return (
                     <div className="flex items-end justify-between gap-1 w-full pl-4 pb-6 relative" style={{ height }}>
-                        {/* Y-Axis Labels (Simplified) */}
-                        <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[10px] text-stone-300">
+                        {/* Y-Axis Labels */}
+                        <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[10px] text-stone-300 dark:text-stone-600">
                             <span>{maxVal}</span>
                             <span>{Math.round(maxVal/2)}</span>
                             <span>0</span>
@@ -403,13 +383,12 @@
 
                         {data.map((d, i) => {
                             const barHeight = `${(d.value / maxVal) * 100}%`;
-                            // 即使值为 0，也给一个最小高度，让它可见
-                            const visualHeight = d.value === 0 ? '2px' : barHeight;
-                            const barColor = getRandomColor(lastColor);
-                            lastColor = barColor;
+                            const visualHeight = d.value === 0 ? '4px' : barHeight; // Fixed base for 0 values
+                            const colorIndex = (i * 7) % CHART_BAR_COLORS.length; // Randomize color
+                            const barColor = CHART_BAR_COLORS[colorIndex];
 
                             return (
-                                <div key={i} className="flex flex-col items-center flex-1 group relative z-10">
+                                <div key={i} className="flex flex-col items-center flex-1 group relative z-10 h-full justify-end">
                                     {/* Tooltip */}
                                     <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 left-1/2 -translate-x-1/2">
                                         <div className="bg-stone-900 text-white text-xs px-3 py-2 rounded-lg shadow-xl whitespace-nowrap relative">
@@ -418,10 +397,13 @@
                                         </div>
                                     </div>
                                     {/* Bar */}
-                                    <div className={`w-full rounded-t-sm relative overflow-hidden transition-all duration-300 group-hover:w-[120%] group-hover:rounded-sm ${barColor} opacity-80 group-hover:opacity-100`} style={{ height: visualHeight, minHeight: d.value === 0 ? '2px' : 'auto' }}>
+                                    <div 
+                                        className={`w-full rounded-t-sm relative overflow-hidden transition-all duration-300 group-hover:w-[140%] group-hover:rounded-sm group-hover:z-30 ${d.value === 0 ? 'bg-stone-200 dark:bg-stone-800 opacity-50' : barColor + ' opacity-90 group-hover:opacity-100'}`} 
+                                        style={{ height: visualHeight }} 
+                                    >
                                     </div>
-                                    {/* X-Axis Label */}
-                                    <span className="text-[10px] text-stone-400 mt-2 scale-90 origin-top absolute top-full pt-1">{d.label}</span>
+                                    {/* X-Axis Label (Simplified: Show 1, 5, 10...) */}
+                                    { (i+1)%5 === 1 && <span className="text-[10px] text-stone-400 mt-2 scale-75 origin-top absolute top-full pt-1">{d.label}</span> }
                                 </div>
                             );
                         })}
@@ -440,7 +422,7 @@
             };
 
             const handleDeleteCard = (id) => {
-                if(confirm("删除此专注卡片?")) { setData(prev => ({ ...prev, focus: { ...prev.focus, cards: prev.focus.cards.filter(c => c.id !== id) } })); setEditingCard(null); }
+                 setData(prev => ({ ...prev, focus: { ...prev.focus, cards: prev.focus.cards.filter(c => c.id !== id) } })); setEditingCard(null); 
             };
 
             return (
@@ -471,7 +453,7 @@
                              </div>
                              <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 overflow-hidden">
                                 <div className="p-4 flex justify-between items-center cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors" onClick={() => setShowStats(!showStats)}><div className="flex items-center gap-2 text-stone-600 dark:text-stone-300 font-medium"><BarChartIcon size={18}/> <span>数据洞察</span></div><ChevronDownIcon size={18} className={`text-stone-400 transition-transform ${showStats ? 'rotate-180' : ''}`} /></div>
-                                <AnimatePresence>{showStats && (<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="border-t border-stone-100 dark:border-stone-800"><div className="p-6 space-y-6"><div className="grid grid-cols-3 gap-4 text-center divide-x divide-stone-100 dark:divide-stone-800"><div><div className="text-xl font-bold text-stone-800 dark:text-stone-100">{totalCount}</div><div className="text-xs text-stone-400">累计次数</div></div><div><div className="text-xl font-bold text-stone-800 dark:text-stone-100">{totalDuration}</div><div className="text-xs text-stone-400">累计时长(min)</div></div><div><div className="text-xl font-bold text-stone-800 dark:text-stone-100">{avgDuration}</div><div className="text-xs text-stone-400">日均时长(min)</div></div></div><div><div className="flex justify-end gap-2 mb-4"><button onClick={() => setStatPeriod('month')} className={`px-3 py-1 text-xs rounded-full ${statPeriod === 'month' ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-500'}`}>本月</button><button onClick={() => setStatPeriod('year')} className={`px-3 py-1 text-xs rounded-full ${statPeriod === 'year' ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-500'}`}>本年</button></div><SimpleBarChart data={getChartData()} height={240} /></div></div></motion.div>)}</AnimatePresence>
+                                <AnimatePresence>{showStats && (<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="border-t border-stone-100 dark:border-stone-800"><div className="p-6 space-y-6"><div className="grid grid-cols-3 gap-4 text-center divide-x divide-stone-100 dark:divide-stone-800"><div><div className="text-xl font-bold text-stone-800 dark:text-stone-100">{totalCount}</div><div className="text-xs text-stone-400">累计次数</div></div><div><div className="text-xl font-bold text-stone-800 dark:text-stone-100">{totalDuration}</div><div className="text-xs text-stone-400">累计时长(min)</div></div><div><div className="text-xl font-bold text-stone-800 dark:text-stone-100">{avgDuration}</div><div className="text-xs text-stone-400">日均时长(min)</div></div></div><div><div className="flex justify-end gap-2 mb-4"><button onClick={() => setStatPeriod('month')} className={`px-3 py-1 text-xs rounded-full ${statPeriod === 'month' ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-500'}`}>本月</button><button onClick={() => setStatPeriod('year')} className={`px-3 py-1 text-xs rounded-full ${statPeriod === 'year' ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-500'}`}>本年</button></div><SimpleBarChart data={getChartData()} height={200} /></div></div></motion.div>)}</AnimatePresence>
                              </div>
                         </div>
                         <div className="space-y-4">
@@ -601,9 +583,10 @@
             const startResizing = (e) => { e.preventDefault(); const startX = e.clientX; const startWidth = sidebarWidth; const doDrag = (ev) => { const newW = startWidth + ev.clientX - startX; if (newW > 80 && newW < 600) setSidebarWidth(newW); }; const stopDrag = () => { document.removeEventListener('mousemove', doDrag); document.removeEventListener('mouseup', stopDrag); }; document.addEventListener('mousemove', doDrag); document.addEventListener('mouseup', stopDrag); };
 
             useEffect(() => { const saved = localStorage.getItem('mindflow_data'); if (saved) { try { const p = JSON.parse(saved); if(!p.settings) p.settings = { autoBackup: false, lastAutoBackupMonth: '', darkMode: false }; if(!p.focus) p.focus = initialData.focus; setData({ ...initialData, ...p }); } catch(e){} } }, []);
+            useEffect(() => { const root = document.documentElement; if (data.settings?.darkMode) root.classList.add('dark'); else root.classList.remove('dark'); }, [data.settings?.darkMode]);
             useEffect(() => { localStorage.setItem('mindflow_data', JSON.stringify(data)); setNeedsBackup((Date.now() - data.lastBackup) / (1000 * 60 * 60 * 24) > 30); const timer = setTimeout(() => { if (data.settings?.autoBackup && data.settings.lastAutoBackupMonth !== getCurrentMonthString()) { handleExport(true); setData(prev => ({ ...prev, settings: { ...prev.settings, lastAutoBackupMonth: getCurrentMonthString() } })); } }, 2000); return () => clearTimeout(timer); }, [data]);
             const handleExport = (isAuto = false) => { const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = isAuto ? `todo_auto_${getTodayString()}.json` : `todo_backup_${getTodayString()}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); if (!isAuto) { setData(prev => ({ ...prev, lastBackup: Date.now() })); setNeedsBackup(false); } };
-            const handleImport = (e) => { const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { try { const imp = JSON.parse(ev.target.result); if (confirm('覆盖数据?')) { if(!imp.settings) imp.settings = {autoBackup:false, lastAutoBackupMonth:''}; setData(imp); setShowSettings(false); } } catch(err){ alert('错误'); } }; reader.readAsText(file); };
+            const handleImport = (e) => { const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { try { const imp = JSON.parse(ev.target.result); if (confirm('覆盖数据?')) { if(!imp.settings) imp.settings = {autoBackup:false, lastAutoBackupMonth:''}; if(!imp.focus) imp.focus = initialData.focus; setData(imp); setShowSettings(false); } } catch(err){ alert('错误'); } }; reader.readAsText(file); };
             const toggleDarkMode = () => { setData(prev => ({ ...prev, settings: { ...prev.settings, darkMode: !prev.settings.darkMode } })); };
             const isMobile = window.innerWidth < 768; const currentSidebarWidth = isMobile ? '80px' : `${sidebarWidth}px`;
 
