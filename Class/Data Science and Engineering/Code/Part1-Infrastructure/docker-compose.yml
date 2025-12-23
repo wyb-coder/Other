@@ -6,7 +6,7 @@ services:
     container_name: namenode
     restart: always
     ports:
-      - 9870:9870
+      - 50070:9870
       - 9000:9000
     volumes:
       - hadoop_namenode:/hadoop/dfs/name
@@ -83,6 +83,63 @@ services:
     depends_on:
       - zookeeper
 
+  # ============================================================================
+  # Spark Cluster (for distributed computation)
+  # ============================================================================
+  spark-master:
+    image: bde2020/spark-master:3.1.1-hadoop3.2
+    container_name: spark-master
+    hostname: spark-master
+    ports:
+      - 8080:8080
+      - 7077:7077
+    environment:
+      - INIT_DAEMON_STEP=setup_spark
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+    depends_on:
+      - namenode
+      - datanode
+
+  spark-worker:
+    image: bde2020/spark-worker:3.1.1-hadoop3.2
+    container_name: spark-worker
+    hostname: spark-worker
+    ports:
+      - 8081:8081
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+    depends_on:
+      - spark-master
+
+  # ============================================================================
+  # Flume Agent (for data collection pipeline)
+  # ============================================================================
+  flume:
+    image: probablyfine/flume:latest
+    container_name: flume
+    hostname: flume
+    volumes:
+      - ./flume-traffic.conf:/opt/flume/conf/flume.conf
+      - flume_incoming:/data/incoming
+      - flume_checkpoint:/data/flume/checkpoint
+      - flume_data:/data/flume/data
+    environment:
+      - FLUME_AGENT_NAME=traffic_agent
+    command: >
+      flume-ng agent
+      --name traffic_agent
+      --conf /opt/flume/conf
+      --conf-file /opt/flume/conf/flume.conf
+      -Dflume.root.logger=INFO,console
+    depends_on:
+      - namenode
+      - hbase-master
+
 volumes:
   hadoop_namenode:
   hadoop_datanode:
+  flume_incoming:
+  flume_checkpoint:
+  flume_data:
+
