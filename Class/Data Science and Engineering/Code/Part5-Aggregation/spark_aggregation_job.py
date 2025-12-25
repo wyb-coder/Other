@@ -1,17 +1,3 @@
-"""
-Spark Aggregation Job for Cluster Submission
-=============================================
-This script is designed to run on the Spark cluster for 15-minute window aggregation.
-
-Submission command:
-  docker exec spark-master spark-submit \
-    --master spark://spark-master:7077 \
-    /opt/spark-apps/spark_aggregation_job.py
-
-Or from local with spark-submit:
-  spark-submit --master spark://localhost:7077 spark_aggregation_job.py
-"""
-
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, sum as _sum, avg, window, to_timestamp
 

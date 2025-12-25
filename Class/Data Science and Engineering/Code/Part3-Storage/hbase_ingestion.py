@@ -1,14 +1,3 @@
-"""
-Phase 3: HBase Data Ingestion with Optimized RowKey Design
-===========================================================
-This script ingests traffic data from CSV into HBase with:
-1. MD5 prefix for load balancing (avoiding hotspots)
-2. Reverse timestamp for efficient "latest first" queries
-
-RowKey Design: MD5(road_seg_id)[0:2] + road_seg_id + (MAX_TS - timestamp)
-Example: "a3" + "13G6S0C4IE013G6P0C4KS00300772" + "9999999999999-1709251200000"
-"""
-
 import csv
 import hashlib
 from datetime import datetime
@@ -28,23 +17,7 @@ MAX_TIMESTAMP = 9999999999999  # Max 13-digit timestamp for reverse ordering
 # RowKey Design Functions
 # ============================================================================
 def generate_rowkey(road_seg_id: str, timestamp_str: str) -> str:
-    """
-    Generate optimized RowKey for HBase.
-    
-    Design: MD5(id)[0:2] + id + (MAX - timestamp)
-    
-    Purpose:
-    - MD5 prefix: Distributes writes across regions (load balancing)
-    - Original ID: Enables prefix scans for specific road segments
-    - Reverse timestamp: Latest data has smallest suffix, appears first in scan
-    
-    Args:
-        road_seg_id: Road segment identifier (e.g., "13G6S0C4IE013G6P0C4KS00300772")
-        timestamp_str: Timestamp string (e.g., "2024-03-01 00:00:00")
-    
-    Returns:
-        RowKey string for HBase
-    """
+
     # Calculate MD5 prefix (first 2 characters)
     md5_hash = hashlib.md5(road_seg_id.encode()).hexdigest()
     md5_prefix = md5_hash[:2]
@@ -82,12 +55,7 @@ def parse_rowkey(rowkey: str) -> dict:
 # Data Ingestion (Generate HBase Commands)
 # ============================================================================
 def generate_hbase_commands(csv_path: str, output_path: str, limit: int = None):
-    """
-    Generate HBase shell commands from CSV for data ingestion.
-    
-    Since happybase requires Thrift server (extra setup), we generate
-    HBase shell commands that can be executed directly.
-    """
+
     print("=" * 60)
     print("Phase 3: Generating HBase Ingestion Commands")
     print("=" * 60)

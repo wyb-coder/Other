@@ -1,17 +1,3 @@
-"""
-Phase 2: Distribution-Aware Data Augmentation Script
-=====================================================
-This script performs advanced data preprocessing and augmentation for the
-traffic monitoring data, expanding 2 days (Fri + Sat) to 7 days.
-
-Key Features:
-1. Data Cleaning: Remove anomalies (negative values, unrealistic speeds)
-2. Distribution Learning: Learn hourly patterns separately for workday/weekend
-3. Cross-Domain Augmentation: Use Friday template for workdays, Saturday for weekends
-4. Friday Evening Effect: Apply β=1.15 coefficient for school dismissal peak
-5. Noise Injection: Prevent identical rows with Gaussian noise
-"""
-
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -24,7 +10,6 @@ INPUT_FILE = "../../Data/82.csv"
 OUTPUT_FILE = "../../Data/82_processed.csv"
 STATS_FILE = "../../Data/processing_stats.txt"
 
-# Augmentation parameters
 FRIDAY_EVENING_COEFFICIENT = 1.15  # β for Friday 17:00+ traffic boost
 FRIDAY_EVENING_START_HOUR = 17
 NOISE_MEAN = 0
@@ -315,20 +300,16 @@ def main():
     print("Phase 2: Distribution-Aware Data Augmentation")
     print("=" * 60)
     
-    # Change to script directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(script_dir)
     
-    # Step 1: Load and clean
+
     df = load_and_clean_data(INPUT_FILE)
     
-    # Step 2: Learn distributions
     distributions, road_ids = learn_distributions(df)
     
-    # Step 3: Augment data
     augmented_df = augment_data(df, distributions, road_ids)
     
-    # Step 4: Save results
     save_results(augmented_df, OUTPUT_FILE, STATS_FILE)
     
     print("\n" + "=" * 60)

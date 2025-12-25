@@ -1,13 +1,3 @@
-"""
-Phase 2: Generate Comprehensive Statistics Report for Thesis
-============================================================
-This script generates detailed statistics including:
-1. Data cleaning summary
-2. Distribution learning results (Friday vs Saturday)
-3. Augmentation methodology
-4. Before/After comparison
-"""
-
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -24,7 +14,6 @@ REPORT_COPY = "./processing_stats.txt"  # Copy in Part2-Preprocessing
 def generate_comprehensive_report():
     """Generate detailed statistics report for thesis writing."""
     
-    # Load both original and processed data
     print("Loading data files...")
     original_df = pd.read_csv(ORIGINAL_FILE)
     processed_df = pd.read_csv(PROCESSED_FILE)
@@ -32,7 +21,6 @@ def generate_comprehensive_report():
     original_df['data_time'] = pd.to_datetime(original_df['data_time'])
     processed_df['data_time'] = pd.to_datetime(processed_df['data_time'])
     
-    # Add derived columns
     original_df['day'] = original_df['data_time'].dt.day
     original_df['hour'] = original_df['data_time'].dt.hour
     original_df['day_name'] = original_df['data_time'].dt.day_name()
@@ -41,14 +29,11 @@ def generate_comprehensive_report():
     processed_df['hour'] = processed_df['data_time'].dt.hour
     processed_df['day_name'] = processed_df['data_time'].dt.day_name()
     
-    # Separate Friday and Saturday from original
     friday_orig = original_df[original_df['day'] == 1]
     saturday_orig = original_df[original_df['day'] == 2]
     
-    # Build comprehensive report
     report = []
     
-    # ========== Header ==========
     report.append("=" * 80)
     report.append("Phase 2: 数据预处理与扩增 - 完整统计报告")
     report.append("Distribution-Aware Data Augmentation Statistics Report")
@@ -74,7 +59,6 @@ def generate_comprehensive_report():
     report.append("2. 分布学习结果 (Distribution Learning Results)")
     report.append("=" * 80)
     
-    # Friday distribution
     report.append("\n2.1 周五 (工作日模板) 分布特征:")
     report.append(f"  总记录数: {len(friday_orig):,}")
     report.append(f"  总流量: {friday_orig['volume'].sum():,}")
@@ -83,7 +67,6 @@ def generate_comprehensive_report():
     report.append(f"  速度均值: {friday_orig['speed'].mean():.2f} km/h")
     report.append(f"  速度标准差: {friday_orig['speed'].std():.2f}")
     
-    # Saturday distribution
     report.append("\n2.2 周六 (休息日模板) 分布特征:")
     report.append(f"  总记录数: {len(saturday_orig):,}")
     report.append(f"  总流量: {saturday_orig['volume'].sum():,}")
